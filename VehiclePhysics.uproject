@@ -5,24 +5,6 @@
 	"Description": "",
 	"Enterprise": true,
 	"Plugins": [
-		{
-			"Name": "LowEntryExtStdLib",
-			"Enabled": false,
-			"MarketplaceURL": "com.epicgames.launcher://ue/marketplace/content/846c2ad08f164f45b0335ecebf85361e"
-		},
-		{
-			"Name": "VictoryBPLibrary",
-			"Enabled": false,
-			"MarketplaceURL": "http://www.ue4code.com"
-		},
-		{
-			"Name": "FMODStudio",
-			"Enabled": false
-		},
-		{
-			"Name": "OWIEnhancedVehicleMovement",
-			"Enabled": false,
-			"MarketplaceURL": "com.epicgames.launcher://ue/marketplace/content/22f5211ad3744d948352de8b52e6fc8a"
-		}
+		
 	]
 }
