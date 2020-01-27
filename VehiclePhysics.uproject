@@ -5,6 +5,9 @@
 	"Description": "",
 	"Enterprise": true,
 	"Plugins": [
-		
+		{
+			"Name": "FMODStudio",
+			"Enabled": false
+		}
 	]
 }
