@@ -2,4 +2,4 @@ Content/** filter=lfs diff=lfs merge=lfs -text
 # Auto detect text files and perform LF normalization
 * text=auto
 * linguist-vendored
-*.uasset linguist-vendored=false
+*. UnrealScript linguist-vendored=false
