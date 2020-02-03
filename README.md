@@ -13,6 +13,8 @@ This will project will be ported to C++ after completing in Blueprints for perfo
 
 This project is based on the tutorials from <a href="https://www.youtube.com/channel/UC2iKJPXiC7vFyBsynfd_XNg/videos">Ivan Novozhilov's YouTube Channel</a> with many changes from me for fair use.
 
+<a href="https://forums.unrealengine.com/community/work-in-progress/1716509-raycast-n-wheel-vehicle-physics-blueprint-project">Unreal Engine Forum page</a> for this project.
+
 # Legal info
  	AutomotiveMaterials and TrackGenerator folders' contents are property of Epic Games and can only be used in Unreal Engine.
 
