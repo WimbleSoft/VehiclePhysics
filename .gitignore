@@ -14,3 +14,5 @@ Saved
 *.xcworkspace
 Intermediate/
 Saved/
+Build/
+Binaries/
