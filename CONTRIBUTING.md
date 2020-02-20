@@ -18,7 +18,7 @@ Do you have questions about the source code?
 
 Do you want a new feature to be added to project?
   
-    Open up a <a target="_blank" target="">Feature Request Github Issue</a>.
+    Open up a <a target="_blank" target="https://github.com/mfatihsaglam/VehiclePhysics/issues/new?assignees=&labels=&template=feature_request.md&title=">Feature Request Github Issue</a>.
     
     Make sure you know what you want really and describe it crystal clear.
     
