@@ -1,0 +1,56 @@
+{e795e8c5-c7d9-4146-87f1-d9610a76238e} bank:/Master
+{7f88c811-b6a2-0d04-01b8-539ffb852516} bank:/Master.strings
+{ea6666a2-99cc-47ff-8c42-3841bcc0a999} bank:/Vehicles
+{af9d027a-3a1f-49a8-a9ef-4cbe20673632} bus:/
+{7e33a2b3-db05-4b7a-ba1e-e862f2bfde36} bus:/Music
+{d320eb98-3d4a-4cd9-a001-fdb4e071c58e} bus:/SFX
+{d9982c58-a056-4e6c-b8e3-883854b4bffb} bus:/SFX/Ambience
+{3e1d1653-8bd5-4dbc-865e-cba8e8ded970} bus:/SFX/Character
+{da23c66c-e512-4a93-98dc-02d6f58e4c5a} bus:/SFX/Explosions
+{3c7de949-be35-4f30-9a7d-48cf3eca2e86} bus:/SFX/Object Panning
+{009ebac0-e5a9-4e69-8d37-6bdc9d8c6f45} bus:/SFX/Objects
+{524ae5a9-928c-4391-9635-34b41d4602af} bus:/SFX/Reverb
+{37ebea86-d649-4a7a-b7b5-25701bfce8e9} bus:/SFX/Vehicles
+{dd124d8d-1ccd-4871-a160-5024e3e3f116} bus:/SFX/Weapons
+{670390e5-527e-4f22-8654-b0326c9cc0c6} bus:/UI
+{69d0d47a-7f4b-4d6c-bfc3-bda91e9f7f1f} bus:/VO
+{eecf455c-9dff-4746-9f7e-67535ac703cf} event:/Vehicles/Backfires
+{7361a1b6-3fab-4f9f-a6e6-27ed6222e52e} event:/Vehicles/EngineStarts/StartAstonMartin
+{0c8363b4-23af-4f9c-af4b-0951bfd37d84} event:/Vehicles/Mercedes/190E/190EEngine
+{31ed7488-515d-4a98-ba27-561c027c8d1c} event:/Vehicles/Mercedes/190E/190EExhaust
+{80de5e1f-580b-4bc9-a26e-710ed0e8d255} event:/Vehicles/Mercedes/SLS_GT3/SLS_GT3_Engine
+{0131308e-804c-4355-88c4-6c18d59e66a3} event:/Vehicles/Mercedes/SLS_GT3/SLS_GT3_Exhaust
+{3ec6a124-579a-4506-a9ae-e4145753eb23} event:/Vehicles/Nissan370z/Nissan370zEngine
+{5685b2f2-d43d-4700-ab03-40180c3f9a2a} event:/Vehicles/Nissan370z/Nissan370zExhaust
+{77e1d961-cfd3-4d6b-b668-5f15335c184e} event:/Vehicles/Transmission
+{9c637b48-28e8-4d1e-ad91-c9c4d99db88c} event:/Vehicles/TurboLoad
+{362127ac-a587-47da-868a-fc86d66a6677} parameter:/Ambience/Cover
+{c5f5903c-d11f-4e44-8f2a-5563c7ed0f20} parameter:/Ambience/Hour
+{4ad59307-2c9a-498d-b318-3a35d01c3b9c} parameter:/Ambience/Rain
+{aa37dcda-6161-459d-bdf5-9400828f7ed3} parameter:/Ambience/Wind
+{b1dc55b5-1863-4645-a918-a52d80cb9c65} parameter:/Character/Health
+{5decf701-7e48-4848-b796-416ec40eb26c} parameter:/Character/Surface
+{b7450daa-aea2-40e5-9aec-40ae4936a328} parameter:/Character/VO Sidechain
+{0b359544-d39b-4139-9a3f-b3060b3920f5} parameter:/GearUpDown
+{6fbe4ad6-7ed5-43c8-94ac-fe278fcdbe03} parameter:/Interactables/Speed
+{34e36cb8-25da-4219-8bcb-c0a4c7e4a704} parameter:/Load
+{20a22b40-454b-4333-98b6-eee0b54cc783} parameter:/Music/Area
+{96d6cd3d-ea4f-4baa-b368-2f1d98940b31} parameter:/Music/Intensity
+{25a540fc-fedb-48d6-8e2f-c51e3cbea5b0} parameter:/Music/Progression
+{b045090a-b061-4c45-90d8-54a5c15e2188} parameter:/Music/Stinger
+{483abc51-f95a-463d-9289-f638b685e853} parameter:/RPM
+{564f147c-6f46-435c-8654-dd5520897e9e} parameter:/TransmissionRatio
+{aa1ac657-dd62-4f41-a6bb-6da8bc435a8a} parameter:/TurboRatio
+{e25821f0-cab8-48f7-94c9-fef8b0f68286} parameter:/Vehicles/Car Engine/RPM
+{04ba1b91-55b3-4ae1-a1f5-b757f6f8a23a} parameter:/Vehicles/F1/RPM_F1
+{3e8e56fe-6058-430e-af80-ca44be8ee759} parameter:/Vehicles/Load
+{27917f63-d316-4f46-95a0-a271283fb8ad} parameter:/Vehicles/Ride-on Mower/RPM
+{aebab073-cbb9-4b10-a724-9daa6698a7cd} parameter:/Weapons/Auto-Stop
+{b53728c5-53bd-4679-bdb1-cd4395b4dbc9} parameter:/Weapons/Distance
+{2860903d-d2a5-4ff6-826d-77426e47a44f} parameter:/Weapons/Size
+{59d1753c-c6fb-42c3-aa59-a76e1053f3ba} parameter:/soundselect
+{87ea4134-fff1-4e9d-8f8b-294a2b518223} snapshot:/Health Low
+{e305a498-2b18-461d-b35c-6eaea45fafd6} snapshot:/Pause
+{b695eec0-fe78-4755-b806-9690c06dfc0b} snapshot:/Reverb/Cave Reverb
+{c107e28e-873b-4caa-9492-68fe72210c48} snapshot:/Reverb/Sewer Reverb
+{6e8d8d09-12e0-48cf-b620-f9cc3bc478a3} snapshot:/Slow-Motion
