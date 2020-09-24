@@ -1,7 +1,3 @@
-# Notice
-I will be on duty from 15 March 2020 to 15 Septenber 2020.
-Don't expect any update between these days.
-
 # VehiclePhysics
 Vehicle Physics project written with Unreal Engine Blueprints
 
