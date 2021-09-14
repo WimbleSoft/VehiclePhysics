@@ -1,7 +1,6 @@
 # VehiclePhysics
 Vehicle Physics project written with Unreal Engine Blueprints
 
-Project cancelled.
 
 # Legal info
  	AutomotiveMaterials and TrackGenerator folders' contents are property of Epic Games and can only be used in Unreal Engine.
