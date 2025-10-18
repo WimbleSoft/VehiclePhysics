@@ -1,0 +1,76 @@
+<html>
+<head>
+<title>Welcome to FMOD for Unreal | New in FMOD for Unreal 2.03</title>
+<link rel="stylesheet" href="style/docs.css">
+<link rel="stylesheet" href="style/code_highlight.css">
+<script type="text/javascript" src="scripts/language-selector.js"></script></head>
+<body>
+<div class="docs-body">
+<div class="manual-toc">
+<p>Unreal Integration 2.03</p>
+<ul>
+<li class="manual-current-chapter manual-inactive-chapter"><a href="welcome.html">Welcome to FMOD for Unreal</a><ul class="subchapters"><li class="manual-current-chapter manual-active-chapter"><a href="welcome-whats-new-203.html">New in FMOD for Unreal 2.03</a></li><li><a href="welcome-whats-new-202.html">New in FMOD for Unreal 2.02</a></li><li><a href="welcome-whats-new-201.html">New in FMOD for Unreal 2.01</a></li><li><a href="welcome-whats-new-200.html">New in FMOD for Unreal 2.00</a></li></ul></li>
+<li><a href="user-guide.html">User Guide</a></li>
+<li><a href="settings.html">Settings</a></li>
+<li><a href="plugins.html">Plugins</a></li>
+<li><a href="niagara.html">Niagara Integration</a></li>
+<li><a href="api-reference.html">API Reference</a></li>
+<li><a href="blueprint-reference.html">Blueprint Reference</a></li>
+<li><a href="platform-specifics.html">Platform Specifics</a></li>
+<li><a href="troubleshooting.html">Troubleshooting</a></li>
+<li><a href="audiolink.html">AudioLink</a></li>
+<li><a href="game-components.html">Game Components</a></li>
+<li><a href="glossary.html">Glossary</a></li>
+</ul>
+</div>
+<div class="manual-content api">
+<h1>1. Welcome to FMOD for Unreal | New in FMOD for Unreal 2.03</h1>
+<div class="toc">
+<ul>
+<li><a href="#whats-new-in-203">What's New in 2.03?</a></li>
+<li><a href="#whats-new-since-202-initial-release">What's New Since 2.02 Initial Release?</a><ul>
+<li><a href="#unreal-engine-versions">Unreal Engine Versions</a></li>
+<li><a href="#added-support-for-niagara">Added Support for Niagara</a></li>
+<li><a href="#added-support-for-audiolink">Added Support for AudioLink</a></li>
+<li><a href="#added-separate-platform-settings">Added Separate Platform Settings</a></li>
+<li><a href="#legacy-memory-pool-settings-removed">Legacy Memory Pool Settings Removed</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<h2 id="whats-new-in-203"><a href="#whats-new-in-203">What's New in 2.03?</a></h2>
+<p>This section describes the major features introduced in the 2.03 release. See the <a href="https://fmod.com/docs/2.03/api/welcome-revision-history.html">Detailed Revision History</a> for information regarding each patch release.</p>
+<p>General runtime features and improvements, including any API changes relevant to scripting are documented in the <a href="https://fmod.com/docs/2.03/api/welcome-whats-new-203.html">API what's new</a> page.</p>
+<h2 id="whats-new-since-202-initial-release"><a href="#whats-new-since-202-initial-release">What's New Since 2.02 Initial Release?</a></h2>
+<p>This section describes any major changes that occurred in 2.02.xx leading up to the release of 2.03.</p>
+<h3 id="unreal-engine-versions"><a href="#unreal-engine-versions">Unreal Engine Versions</a></h3>
+<p>Added support for version 4.27, 5.0, 5.1, 5.2, 5.3.</p>
+<h3 id="added-support-for-niagara"><a href="#added-support-for-niagara">Added Support for Niagara</a></h3>
+<p>In version 2.02.18 we added support for <a href="niagara.html">Niagara</a>, Unreal's next gen VFX System.</p>
+<h3 id="added-support-for-audiolink"><a href="#added-support-for-audiolink">Added Support for AudioLink</a></h3>
+<p>Starting from UE5.1, we have added support for <a href="audiolink.html">AudioLink</a>, which allows the Audio from Unreal to be passed to FMOD.</p>
+<h3 id="added-separate-platform-settings"><a href="#added-separate-platform-settings">Added Separate Platform Settings</a></h3>
+<p>Some settings that are common among all platforms, and useful to customize, have been separated into specific <a href="https://fmod.com/docs/2.03/unreal/settings.html#platform-settings">Platform Settings</a>.</p>
+<h3 id="legacy-memory-pool-settings-removed"><a href="#legacy-memory-pool-settings-removed">Legacy Memory Pool Settings Removed</a></h3>
+<p>The original platform memory pool settings have been removed in favor of having Separate Platform Settings.<br />
+If you were previously using these settings you will need to manually transfer them to the new settings:</p>
+<table>
+<thead>
+<tr>
+<th>Legacy</th>
+<th>New</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><img alt="Legacy Memory Pool Settings" src="images/memory-pool-settings.png" /></td>
+<td><img alt="New Platform Memory Pool Settings" src="images/platform-pool-settings.png" /></td>
+</tr>
+</tbody>
+</table></div>
+
+<p class="manual-footer">Unreal Integration 2.03.09 (2025-08-05). &copy; 2025 Firelight Technologies Pty Ltd.</p>
+</body>
+</html>
+
+</div>

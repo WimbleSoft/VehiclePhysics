@@ -1,9 +1,18 @@
 {
 	"FileVersion": 3,
-	"EngineAssociation": "4.27",
+	"EngineAssociation": "5.4",
 	"Category": "",
 	"Description": "",
-	"Enterprise": true,
+	"Modules": [
+		{
+			"Name": "VehiclePhysics",
+			"Type": "Runtime",
+			"LoadingPhase": "Default",
+			"AdditionalDependencies": [
+				"Engine"
+			]
+		}
+	],
 	"Plugins": [
 		{
 			"Name": "FMODStudio",
@@ -27,6 +36,18 @@
 		},
 		{
 			"Name": "SunPosition",
+			"Enabled": true
+		},
+		{
+			"Name": "VisualStudioTools",
+			"Enabled": true,
+			"SupportedTargetPlatforms": [
+				"Win64"
+			],
+			"MarketplaceURL": "com.epicgames.launcher://ue/marketplace/product/362651520df94e4fa65492dbcba44ae2"
+		},
+		{
+			"Name": "FMODStudioNiagara",
 			"Enabled": true
 		}
 	]

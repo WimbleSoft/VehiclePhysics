@@ -1,0 +1,113 @@
+<html>
+<head>
+<title>Game Components</title>
+<link rel="stylesheet" href="style/docs.css">
+<link rel="stylesheet" href="style/code_highlight.css">
+<script type="text/javascript" src="scripts/language-selector.js"></script></head>
+<body>
+<div class="docs-body">
+<div class="manual-toc">
+<p>Unreal Integration 2.03</p>
+<ul>
+<li><a href="welcome.html">Welcome to FMOD for Unreal</a></li>
+<li><a href="user-guide.html">User Guide</a></li>
+<li><a href="settings.html">Settings</a></li>
+<li><a href="plugins.html">Plugins</a></li>
+<li><a href="niagara.html">Niagara Integration</a></li>
+<li><a href="api-reference.html">API Reference</a></li>
+<li><a href="blueprint-reference.html">Blueprint Reference</a></li>
+<li><a href="platform-specifics.html">Platform Specifics</a></li>
+<li><a href="troubleshooting.html">Troubleshooting</a></li>
+<li><a href="audiolink.html">AudioLink</a></li>
+<li class="manual-current-chapter manual-active-chapter"><a href="game-components.html">Game Components</a><ul>
+<li><a href="#fmod-ambient-sound">FMOD Ambient Sound</a><ul>
+<li><a href="#adding-fmod-ambient-sounds">Adding FMOD Ambient Sounds</a><ul>
+<li><a href="#drag-drop-from-the-fmod-content-browser">Drag &amp; Drop from the FMOD Content Browser</a></li>
+<li><a href="#add-to-project-dropdown">Add To Project Dropdown</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="#fmod-audio-component">FMOD Audio Component</a><ul>
+<li><a href="#selecting-the-event">Selecting the Event</a></li>
+<li><a href="#playing-an-event">Playing an Event</a><ul>
+<li><a href="#playing-automatically">Playing automatically</a></li>
+<li><a href="#scripted-playback">Scripted Playback</a><ul>
+<li><a href="#blueprint">Blueprint</a></li>
+</ul>
+</li>
+<li><a href="#one-shot-vs-looping">One-Shot vs Looping</a></li>
+</ul>
+</li>
+<li><a href="#parameter-cache">Parameter Cache</a><ul>
+<li><a href="#blueprint_1">Blueprint</a></li>
+<li><a href="#c">C++</a></li>
+</ul>
+</li>
+<li><a href="#programmer-sound-name">Programmer Sound Name</a></li>
+<li><a href="#attenuation-3d-settings">Attenuation &amp; 3D Settings</a></li>
+<li><a href="#occlusion-details">Occlusion Details</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="glossary.html">Glossary</a></li>
+</ul>
+</div>
+<div class="manual-content api">
+<h1>11. Game Components</h1>
+<h2 id="fmod-ambient-sound"><a href="#fmod-ambient-sound">11.1 FMOD Ambient Sound</a></h2>
+<p><img alt="AmbientSound" src="images/ambient-sound-details.png" /></p>
+<p>The FMOD Ambient Sound in the FMOD Unreal Integration allows you to easily play an <a href="https://fmod.com/docs/2.03/studio/fmod-studio-concepts.html#event">FMOD Studio Event</a> at a specific location in your level. Each Ambient Sound Actor creates and manages an <a href="https://fmod.com/docs/2.03/studio/glossary.html#event-instance">Event Instance</a>, which is handled automatically by the <a class="apilink" href="#fmod-audio-component">FMOD Audio Component</a>.</p>
+<h3 id="adding-fmod-ambient-sounds"><a href="#adding-fmod-ambient-sounds">11.1.1 Adding FMOD Ambient Sounds</a></h3>
+<h4 id="drag-drop-from-the-fmod-content-browser"><a href="#drag-drop-from-the-fmod-content-browser">Drag &amp; Drop from the FMOD Content Browser</a></h4>
+<p>You can drag an Event asset directly from the FMOD Content folder in the Content Browser into your level. This will create an FMOD Ambient Sound Actor in your scene with the selected event already assigned.</p>
+<h4 id="add-to-project-dropdown"><a href="#add-to-project-dropdown">Add To Project Dropdown</a></h4>
+<p><img alt="Add Ambient Sound" src="images/quick-add-ambient-sound.png" /><br />
+Searching for <code>FMOD Ambient Sound</code> wil expose the component to be added to the map.</p>
+<h2 id="fmod-audio-component"><a href="#fmod-audio-component">11.2 FMOD Audio Component</a></h2>
+<p><img alt="FMODAudioComponent" src="images/audio-component-details.png" /></p>
+<p>The FMOD Audio Component allows you easily add FMOD events to actors in your map. The Audio Component can start its <a href="https://fmod.com/docs/2.03/api/studio-api-eventinstance.html">event instance</a>, assign initial parameter values and additional options.</p>
+<h3 id="selecting-the-event"><a href="#selecting-the-event">11.2.1 Selecting the Event</a></h3>
+<p>Use the Event property in the Details panel to assign an FMOD Event. You can:</p>
+<ul>
+<li>Choose from the dropdown list (auto-filled from FMOD assets in your project).</li>
+<li>Drag the Event asset directly from the Content Browser into the Event field.</li>
+</ul>
+<h3 id="playing-an-event"><a href="#playing-an-event">11.2.2 Playing an Event</a></h3>
+<h4 id="playing-automatically"><a href="#playing-automatically">Playing automatically</a></h4>
+<p>Enable the <code>Auto Activate</code> property to have the event start playing when the game begins or when the Actor is spawned.</p>
+<h4 id="scripted-playback"><a href="#scripted-playback">Scripted Playback</a></h4>
+<p>You can also control playback via Blueprints or C++:</p>
+<h5 id="blueprint"><a href="#blueprint">Blueprint</a></h5>
+<p><a href="blueprint-reference-component.html#play">Play</a><br />
+<img alt="Play Node" src="images/play.png" /><br />
+<a href="blueprint-reference-component.html#stop">Stop</a><br />
+<img alt="Stop Node" src="images/stop.png" /></p>
+<h4 id="one-shot-vs-looping"><a href="#one-shot-vs-looping">One-Shot vs Looping</a></h4>
+<ul>
+<li>One-shot events will create a new instance each time you call <code>Play()</code>. These will automatically release once playback is complete.</li>
+<li>Looping events continue until explicitly stopped.</li>
+</ul>
+<h3 id="parameter-cache"><a href="#parameter-cache">11.2.3 Parameter Cache</a></h3>
+<p>You can set Initial <a href="https://fmod.com/docs/2.03/studio/parameters.html">Parameters</a> values in the component before playback starts. The array will be populated by parameters applied to the event in FMOD Studio. To change parameter values during gameplay during playback via Blueprints of C++:</p>
+<h4 id="blueprint_1"><a href="#blueprint_1">Blueprint</a></h4>
+<p><a href="blueprint-reference-eventinstance.html#event-instance-set-parameter">Event Instance Set Parameter</a><br />
+<img alt="Event Instance Set Parameter" src="images/event-instance-set-parameter.png" /></p>
+<h4 id="c"><a href="#c">C++</a></h4>
+<div class="highlight language-cpp"><pre><span></span><span class="n">Emitter</span><span class="o">-&gt;</span><span class="n">SetParameter</span><span class="p">(</span><span class="s">&quot;Wind&quot;</span><span class="p">,</span> <span class="mf">0.5f</span><span class="p">);</span>
+</pre></div>
+
+<h3 id="programmer-sound-name"><a href="#programmer-sound-name">11.2.4 Programmer Sound Name</a></h3>
+<p>An Audio Component can be used to set the key or file path to be played via a <a href="%studio&amp;glossary.html#programmer-instrument">Programmer Instrument</a></p>
+<h3 id="attenuation-3d-settings"><a href="#attenuation-3d-settings">11.2.5 Attenuation &amp; 3D Settings</a></h3>
+<p>Enabling Attenuation Override will apply then be able to apply new minimum and maximum values for falloff distances.</p>
+<p>Note: the values entered here will not affect a spatializer on the event that is overriding with its own values.</p>
+<h3 id="occlusion-details"><a href="#occlusion-details">11.2.6 Occlusion Details</a></h3>
+<p>Enabling occlusion will use a raycast from the event to the listener to determine of occlusion should be applied to the signal of the event. The Channel to be checked against can be changed here. For more information please refer to the <a href="user-guide.html#occlusion">Occlusion Settings</a>.</p></div>
+
+<p class="manual-footer">Unreal Integration 2.03.09 (2025-08-05). &copy; 2025 Firelight Technologies Pty Ltd.</p>
+</body>
+</html>
+
+</div>

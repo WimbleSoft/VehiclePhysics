@@ -1,0 +1,177 @@
+<html>
+<head>
+<title>Plugins</title>
+<link rel="stylesheet" href="style/docs.css">
+<link rel="stylesheet" href="style/code_highlight.css">
+<script type="text/javascript" src="scripts/language-selector.js"></script></head>
+<body>
+<div class="docs-body">
+<div class="manual-toc">
+<p>Unreal Integration 2.03</p>
+<ul>
+<li><a href="welcome.html">Welcome to FMOD for Unreal</a></li>
+<li><a href="user-guide.html">User Guide</a></li>
+<li><a href="settings.html">Settings</a></li>
+<li class="manual-current-chapter manual-active-chapter"><a href="plugins.html">Plugins</a><ul>
+<li><a href="#adding-plugins-to-the-project">Adding plugins to the project</a><ul>
+<li><a href="#dynamic-plugins">Dynamic Plugins</a></li>
+<li><a href="#static-plugins">Static Plugins</a></li>
+</ul>
+</li>
+<li><a href="#deploying-fmod-plugins">Deploying FMOD plugins</a></li>
+</ul>
+</li>
+<li><a href="niagara.html">Niagara Integration</a></li>
+<li><a href="api-reference.html">API Reference</a></li>
+<li><a href="blueprint-reference.html">Blueprint Reference</a></li>
+<li><a href="platform-specifics.html">Platform Specifics</a></li>
+<li><a href="troubleshooting.html">Troubleshooting</a></li>
+<li><a href="audiolink.html">AudioLink</a></li>
+<li><a href="game-components.html">Game Components</a></li>
+<li><a href="glossary.html">Glossary</a></li>
+</ul>
+</div>
+<div class="manual-content api">
+<h1>4. Plugins</h1>
+<p>FMOD Studio projects can be set up to use third party plugins. These can include custom DSP effects that are created in-house or commercial products that can be used with FMOD Studio.</p>
+<h2 id="adding-plugins-to-the-project"><a href="#adding-plugins-to-the-project">4.1 Adding plugins to the project</a></h2>
+<h3 id="dynamic-plugins"><a href="#dynamic-plugins">4.1.1 Dynamic Plugins</a></h3>
+<p>The plugins must be loaded at runtime so that they are there when loading the banks that need them. <a href="settings.html#plugin-files">Plugins</a> are set up in the project settings <a href="settings.html#advanced">Advanced</a> section.</p>
+<p><img alt="Plugins" src="images/plugins.png" /></p>
+<p>Each entry should be the filename of the plugin, without any extension. Any plugin files required should be added to the platform's binary directory:</p>
+<table>
+<thead>
+<tr>
+<th>Platform</th>
+<th>Binary Directory</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Windows</td>
+<td>Plugins/FMODStudio/Binaries/Win64</td>
+</tr>
+<tr>
+<td>Mac</td>
+<td>Plugins/FMODStudio/Binaries/Mac</td>
+</tr>
+<tr>
+<td>iOS</td>
+<td>Plugins/FMODStudio/Binaries/IOS</td>
+</tr>
+<tr>
+<td>tvOS</td>
+<td>Plugins/FMODStudio/Binaries/TVOS</td>
+</tr>
+<tr>
+<td>Android</td>
+<td>Plugins/FMODStudio/Binaries/Android</td>
+</tr>
+<tr>
+<td>PS4</td>
+<td>Platforms/PS4/Plugins/FMODStudio/Binaries</td>
+</tr>
+<tr>
+<td>PS5</td>
+<td>Platforms/PS5/Plugins/FMODStudio/Binaries</td>
+</tr>
+<tr>
+<td>Switch</td>
+<td>Platforms/Switch/Plugins/FMODStudio/Binaries</td>
+</tr>
+<tr>
+<td>WinGDK</td>
+<td>Platforms/WinGDK/Plugins/FMODStudio/Binaries</td>
+</tr>
+<tr>
+<td>Xbox One</td>
+<td>Platforms/XB1/Plugins/FMODStudio/Binaries</td>
+</tr>
+<tr>
+<td>Xbox Series</td>
+<td>Platforms/XSX/Plugins/FMODStudio/Binaries</td>
+</tr>
+</tbody>
+</table>
+<p>For example, to use fmod_gain.dll on Win64 builds, you should add the file here:</p>
+<div class="highlight language-text"><pre><span></span>FMODStudio/Binaries/Win64/fmod_gain.dll
+</pre></div>
+
+<h3 id="static-plugins"><a href="#static-plugins">4.1.2 Static Plugins</a></h3>
+<p>Switch, iOS, and tvOS require plugins to be linked statically, which requires manually registering them with the <a href="https://fmod.com/docs/2.03/api/core-api-system.html">FMOD::System</a>. To achieve this you can create a new <a href="https://dev.epicgames.com/documentation/en-us/unreal-engine/objects-in-unreal-engine">UObject</a> that implements <a class="apilink" href="api-reference-ifmodcallbackhandler.html">IFMODCallbackHandler</a> and calls <a href="https://fmod.com/docs/2.03/api/core-api-system.html#system_registerdsp">FMOD::System::registerDSP</a> in the <a class="apilink" href="api-reference-ifmodcallbackhandler.html#ifmodcallbackhandler_preinitialize">IFMODCallbackHandler::PreInitialize</a> callback.</p>
+<p>Creating the C++ UObject:</p>
+<p><img alt="Create Class" src="images/programmer-sound-create.png" /></p>
+<p>Select Object:</p>
+<p><img alt="Select Object" src="images/callback-handler-uobject.png" /></p>
+<p>Name the Object:</p>
+<p><img alt="Name Object" src="images/callback-handler-name-uobject.png" /></p>
+<p>Implement the callback handler, replacing <code>MYPROJECT_API</code> with the name of your project's API:</p>
+<div class="highlight language-cpp"><pre><span></span><span class="cp">#pragma once</span>
+<span class="cp">#include</span> <span class="cpf">&quot;CoreMinimal.h&quot;</span><span class="cp"></span>
+<span class="cp">#include</span> <span class="cpf">&quot;UObject/NoExportTypes.h&quot;</span><span class="cp"></span>
+<span class="cp">#include</span> <span class="cpf">&lt;FMODCallbackHandler.h&gt;</span><span class="cp"></span>
+<span class="cp">#include</span> <span class="cpf">&quot;fmod_errors.h&quot;</span><span class="cp"></span>
+<span class="cp">#if PLATFORM_IOS</span>
+<span class="k">extern</span> <span class="s">&quot;C&quot;</span> <span class="n">FMOD_DSP_DESCRIPTION</span><span class="o">*</span> <span class="n">FMOD_ResonanceAudioListener_GetDSPDescription</span><span class="p">();</span>
+<span class="k">extern</span> <span class="s">&quot;C&quot;</span> <span class="n">FMOD_DSP_DESCRIPTION</span><span class="o">*</span> <span class="n">FMOD_ResonanceAudioSoundfield_GetDSPDescription</span><span class="p">();</span>
+<span class="k">extern</span> <span class="s">&quot;C&quot;</span> <span class="n">FMOD_DSP_DESCRIPTION</span><span class="o">*</span> <span class="n">FMOD_ResonanceAudioSource_GetDSPDescription</span><span class="p">();</span>
+<span class="cp">#endif</span>
+<span class="cp">#include</span> <span class="cpf">&quot;ConcreteFMODCallbackHandler.generated.h&quot;</span><span class="cp"></span>
+<span class="n">UCLASS</span><span class="p">()</span>
+<span class="k">class</span> <span class="nc">MYPROJECT_API</span> <span class="nl">UConcreteFMODCallbackHandler</span> <span class="p">:</span> <span class="k">public</span> <span class="n">UObject</span><span class="p">,</span> <span class="k">public</span> <span class="n">IFMODCallbackHandler</span>
+<span class="p">{</span>
+    <span class="n">GENERATED_BODY</span><span class="p">()</span>
+<span class="k">public</span><span class="o">:</span>
+    <span class="kt">void</span> <span class="n">PreInitialize</span><span class="p">(</span><span class="n">FMOD</span><span class="o">::</span><span class="n">Studio</span><span class="o">::</span><span class="n">System</span><span class="o">*</span> <span class="n">System</span><span class="p">)</span> <span class="k">override</span>
+    <span class="p">{</span>
+<span class="cp">#if PLATFORM_IOS</span>
+        <span class="n">FMOD</span><span class="o">::</span><span class="n">System</span><span class="o">*</span> <span class="n">CoreSystem</span><span class="p">;</span>
+        <span class="n">FMOD_RESULT</span> <span class="n">result</span> <span class="o">=</span> <span class="n">System</span><span class="o">-&gt;</span><span class="n">getCoreSystem</span><span class="p">(</span><span class="o">&amp;</span><span class="n">CoreSystem</span><span class="p">);</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">result</span> <span class="o">!=</span> <span class="n">FMOD_OK</span><span class="p">)</span>
+        <span class="p">{</span>
+            <span class="n">UE_LOG</span><span class="p">(</span><span class="n">LogTemp</span><span class="p">,</span> <span class="n">Warning</span><span class="p">,</span> <span class="n">TEXT</span><span class="p">(</span><span class="s">&quot;UConcreteFMODCallbackHandler::PreInitialize: Failed to acquire core system: %s&quot;</span><span class="p">),</span> <span class="n">UTF8_TO_TCHAR</span><span class="p">(</span><span class="n">FMOD_ErrorString</span><span class="p">(</span><span class="n">result</span><span class="p">)));</span>
+            <span class="k">return</span><span class="p">;</span>
+        <span class="p">}</span>
+
+        <span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">ListenerHandle</span><span class="p">;</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">CoreSystem</span><span class="o">-&gt;</span><span class="n">registerDSP</span><span class="p">(</span><span class="n">FMOD_ResonanceAudioListener_GetDSPDescription</span><span class="p">(),</span> <span class="o">&amp;</span><span class="n">ListenerHandle</span><span class="p">);</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">result</span> <span class="o">!=</span> <span class="n">FMOD_OK</span><span class="p">)</span>
+        <span class="p">{</span>
+            <span class="n">UE_LOG</span><span class="p">(</span><span class="n">LogTemp</span><span class="p">,</span> <span class="n">Warning</span><span class="p">,</span> <span class="n">TEXT</span><span class="p">(</span><span class="s">&quot;UConcreteFMODCallbackHandler::PreInitialize: Failed to register ResonanceAudioListener: %s&quot;</span><span class="p">),</span> <span class="n">UTF8_TO_TCHAR</span><span class="p">(</span><span class="n">FMOD_ErrorString</span><span class="p">(</span><span class="n">result</span><span class="p">)));</span>
+        <span class="p">}</span>
+
+        <span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">SoundfieldHandle</span><span class="p">;</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">CoreSystem</span><span class="o">-&gt;</span><span class="n">registerDSP</span><span class="p">(</span><span class="n">FMOD_ResonanceAudioSoundfield_GetDSPDescription</span><span class="p">(),</span> <span class="o">&amp;</span><span class="n">SoundfieldHandle</span><span class="p">);</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">result</span> <span class="o">!=</span> <span class="n">FMOD_OK</span><span class="p">)</span>
+        <span class="p">{</span>
+            <span class="n">UE_LOG</span><span class="p">(</span><span class="n">LogTemp</span><span class="p">,</span> <span class="n">Warning</span><span class="p">,</span> <span class="n">TEXT</span><span class="p">(</span><span class="s">&quot;UConcreteFMODCallbackHandler::PreInitialize: Failed to register ResonanceAudioSoundfield: %s&quot;</span><span class="p">),</span> <span class="n">UTF8_TO_TCHAR</span><span class="p">(</span><span class="n">FMOD_ErrorString</span><span class="p">(</span><span class="n">result</span><span class="p">)));</span>
+        <span class="p">}</span>
+
+        <span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">SourceHandle</span><span class="p">;</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">CoreSystem</span><span class="o">-&gt;</span><span class="n">registerDSP</span><span class="p">(</span><span class="n">FMOD_ResonanceAudioSource_GetDSPDescription</span><span class="p">(),</span> <span class="o">&amp;</span><span class="n">SourceHandle</span><span class="p">);</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">result</span> <span class="o">!=</span> <span class="n">FMOD_OK</span><span class="p">)</span>
+        <span class="p">{</span>
+            <span class="n">UE_LOG</span><span class="p">(</span><span class="n">LogTemp</span><span class="p">,</span> <span class="n">Warning</span><span class="p">,</span> <span class="n">TEXT</span><span class="p">(</span><span class="s">&quot;UConcreteFMODCallbackHandler::PreInitialize: Failed to register ResonanceAudioSource: %s&quot;</span><span class="p">),</span> <span class="n">UTF8_TO_TCHAR</span><span class="p">(</span><span class="n">FMOD_ErrorString</span><span class="p">(</span><span class="n">result</span><span class="p">)));</span>
+        <span class="p">}</span>
+<span class="cp">#endif</span>
+    <span class="p">}</span>
+<span class="p">};</span>
+</pre></div>
+
+<p>Once you recompile your source code you will be able to assign your newly created callback handler object to the <a class="apilink" href="api-reference-ufmodsettings.html#ufmodsettings_callbackhandler">UFMODSettings::CallbackHandler</a> in the project settings <a href="settings.html#advanced">Advanced</a> section:</p>
+<p><img alt="Plugins" src="images/callback-handler.png" /></p>
+<p>Alternatively you can specify a callback handler on a per-platform basis in the <a href="settings.html#platform-settings">Platform Settings</a>. If both callback handlers are specified only the platform specific callback handler will be executed.</p>
+<h2 id="deploying-fmod-plugins"><a href="#deploying-fmod-plugins">4.2 Deploying FMOD plugins</a></h2>
+<p>You will need to make sure that both static and dynamic plugins are deployed as well. Unreal deployment doesn't have access to the settings information so you will need to create an extra file that lists the plugins you want to deploy.</p>
+<p>Create a file "plugins.txt" in the platform's binary directory. The text file should contain the plugin names (just the name without file extension).</p>
+<p>For example, to deploy fmod_gain.dll on Win64 builds, create a file FMODStudio/Binaries/Win64/plugins.txt with the following contents:</p>
+<div class="highlight language-text"><pre><span></span>fmod_gain
+</pre></div>
+
+<p>Check the <a href="platform-specifics.html">Platform Specifics</a> for information relating to plugins on specific platforms.</p></div>
+
+<p class="manual-footer">Unreal Integration 2.03.09 (2025-08-05). &copy; 2025 Firelight Technologies Pty Ltd.</p>
+</body>
+</html>
+
+</div>
