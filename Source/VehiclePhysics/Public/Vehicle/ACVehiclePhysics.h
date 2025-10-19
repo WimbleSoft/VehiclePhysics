@@ -39,7 +39,7 @@ public:
 public:
 	/** Please add a function description */
 	UFUNCTION(BlueprintPure, Category = "Read Data")
-	void GetAxisSockets(TArray<FName>& AxisSockets, TArray<FName> SocketsX);
+	void GetAxisSockets(TArray<FName>& AxisSockets, TArray<FName> SocketsP);
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintPure, Category = "Read Data")
@@ -63,7 +63,7 @@ public:
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintPure, Category = "ReadData")
-	void GetSuspensions(TArray<USCWheel*>& Suspensions, TArray<USCWheel*> SuspensionArrayX);
+	void GetSuspensions(TArray<USCWheel*>& Suspensions, TArray<USCWheel*> SuspensionArrayP);
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable, Category = "SC_Creator")
@@ -79,7 +79,7 @@ public:
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable, Category = "Set Engine Data")
-	void CalcEngine(double& EngineTorqueP, double RestOrIdleKineticEnergyX, double MaxKineticEnergyX, double LocalEngineTorqueP);
+	void CalcEngine(double& EngineTorqueP, double RestOrIdleKineticEnergyP, double MaxKineticEnergyP, double LocalEngineTorqueP);
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable, Category = "Set Engine Data")

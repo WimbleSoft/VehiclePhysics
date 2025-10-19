@@ -28,39 +28,39 @@ public:
 public:
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable)
-	void CreateSuspensionsX();
+	void CreateSuspensions();
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintPure)
-	void GetVehicleX(AVehicle*& CarActor);
+	void GetVehicle(AVehicle*& CarActor);
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintPure)
-	void CalcFrictionTorqueFeedbackRatioBiasX(USCWheel* Suspension, UPARAM(ref) TArray<USCWheel*>& AllSuspensions, double& OutputPin);
+	void CalcFrictionTorqueFeedbackRatioBias(USCWheel* Suspension, UPARAM(ref) TArray<USCWheel*>& AllSuspensions, double& OutputPin);
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintPure)
-	void GetCurrentAxisVelocityX(double& AxisVelocity, double TotalAngularVelocity);
+	void GetCurrentAxisVelocity(double& AxisVelocity, double TotalAngularVelocity);
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable)
-	void SetAxisDriveTorqueX(UPARAM(ref) double& TotalDriveTorque);
+	void SetAxisDriveTorque(UPARAM(ref) double& TotalDriveTorque);
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable)
-	void CalcWheelDriveTorqueX(double AxisTractionTorqueL);
+	void CalcWheelDriveTorque(double AxisTractionTorqueL);
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable)
-	void PrintDebugX();
+	void PrintDebug();
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintPure)
-	void GetCurrentAxisFrictionTorqueX(double& AxisFrictionTorqueL, double TotalAxisFrictionTorqueL);
+	void GetCurrentAxisFrictionTorque(double& AxisFrictionTorqueL, double TotalAxisFrictionTorqueL);
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintPure)
-	void GetCurrentAxisTractionTorqueX(double& AxisTractionTorqueL, double TotalAxisTractionTorqueL);
+	void GetCurrentAxisTractionTorque(double& AxisTractionTorqueL, double TotalAxisTractionTorqueL);
 public:
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Default", meta = (MultiLine = "true", ExposeOnSpawn = "true"))

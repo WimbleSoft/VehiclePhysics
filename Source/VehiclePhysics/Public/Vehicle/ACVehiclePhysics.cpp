@@ -36,7 +36,7 @@ void UACVehiclePhysics::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 
 }
 
-void UACVehiclePhysics::GetAxisSockets(TArray<FName>& AxisSockets, TArray<FName> SocketsX)
+void UACVehiclePhysics::GetAxisSockets(TArray<FName>& AxisSockets, TArray<FName> SocketsP)
 {
 }
 
@@ -60,7 +60,7 @@ void UACVehiclePhysics::SetClutchInput(double Clutch)
 {
 }
 
-void UACVehiclePhysics::GetSuspensions(TArray<USCWheel*>& Suspensions, TArray<USCWheel*> SuspensionArrayX)
+void UACVehiclePhysics::GetSuspensions(TArray<USCWheel*>& Suspensions, TArray<USCWheel*> SuspensionArrayP)
 {
 }
 
@@ -76,7 +76,7 @@ void UACVehiclePhysics::SetLoad()
 {
 }
 
-void UACVehiclePhysics::CalcEngine(double& EngineTorqueP, double RestOrIdleKineticEnergyX, double MaxKineticEnergyX, double LocalEngineTorqueP)
+void UACVehiclePhysics::CalcEngine(double& EngineTorqueP, double RestOrIdleKineticEnergyP, double MaxKineticEnergyP, double LocalEngineTorqueP)
 {
 }
 

@@ -32,39 +32,39 @@ void USCAxis::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponen
 	// ...
 }
 
-void USCAxis::CreateSuspensionsX()
+void USCAxis::CreateSuspensions()
 {
 }
 
-void USCAxis::GetVehicleX(AVehicle*& CarActor)
+void USCAxis::GetVehicle(AVehicle*& CarActor)
 {
 }
 
-void USCAxis::CalcFrictionTorqueFeedbackRatioBiasX(USCWheel* Suspension, UPARAM(ref)TArray<USCWheel*>& AllSuspensions, double& OutputPin)
+void USCAxis::CalcFrictionTorqueFeedbackRatioBias(USCWheel* Suspension, UPARAM(ref)TArray<USCWheel*>& AllSuspensions, double& OutputPin)
 {
 }
 
-void USCAxis::GetCurrentAxisVelocityX(double& AxisVelocity, double TotalAngularVelocity)
+void USCAxis::GetCurrentAxisVelocity(double& AxisVelocity, double TotalAngularVelocity)
 {
 }
 
-void USCAxis::SetAxisDriveTorqueX(UPARAM(ref) double& TotalDriveTorque)
+void USCAxis::SetAxisDriveTorque(UPARAM(ref) double& TotalDriveTorque)
 {
 }
 
-void USCAxis::CalcWheelDriveTorqueX(double AxisTractionTorqueL)
+void USCAxis::CalcWheelDriveTorque(double AxisTractionTorqueL)
 {
 }
 
-void USCAxis::PrintDebugX()
+void USCAxis::PrintDebug()
 {
 }
 
-void USCAxis::GetCurrentAxisFrictionTorqueX(double& AxisFrictionTorqueL, double TotalAxisFrictionTorqueL)
+void USCAxis::GetCurrentAxisFrictionTorque(double& AxisFrictionTorqueL, double TotalAxisFrictionTorqueL)
 {
 }
 
-void USCAxis::GetCurrentAxisTractionTorqueX(double& AxisTractionTorqueL, double TotalAxisTractionTorqueL)
+void USCAxis::GetCurrentAxisTractionTorque(double& AxisTractionTorqueL, double TotalAxisTractionTorqueL)
 {
 }
 
