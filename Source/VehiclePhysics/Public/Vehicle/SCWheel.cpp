@@ -1,5 +1,6 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
+#pragma once
 
 #include "SCWheel.h"
 
@@ -10,7 +11,10 @@ USCWheel::USCWheel()
 	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = true;
 
-	// ...
+	USCWheel::W_RayTotalDegree = 120;
+	USCWheel::W_RayCountPerDepth = 14;
+	USCWheel::W_RayYaxisDepth = 2;
+
 }
 
 

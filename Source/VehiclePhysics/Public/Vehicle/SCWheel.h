@@ -133,85 +133,89 @@ public:
 	/** cm */
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "SuspensionData", meta = (MultiLine = "true"))
 	double LastSpringLength;
-private:
+
 	/** Suspension Force */
-	UPROPERTY(EditDefaultsOnly, Category = "Forces", meta = (MultiLine = "true"))
+	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Forces", meta = (MultiLine = "true"))
 	double Fx;
 
 	/** Tire Friction */
-	UPROPERTY(EditDefaultsOnly, Category = "Forces", meta = (MultiLine = "true"))
+	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Forces", meta = (MultiLine = "true"))
 	FVector FxVec;
 
 	/** Suspension Force */
-	UPROPERTY(EditDefaultsOnly, Category = "Forces", meta = (MultiLine = "true"))
+	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Forces", meta = (MultiLine = "true"))
 	double Fy;
 
 	/** Tire Friction */
-	UPROPERTY(EditDefaultsOnly, Category = "Forces", meta = (MultiLine = "true"))
+	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Forces", meta = (MultiLine = "true"))
 	FVector FyVec;
 
 	/** Suspension Force */
-	UPROPERTY(EditDefaultsOnly, Category = "Forces", meta = (MultiLine = "true"))
+	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Forces", meta = (MultiLine = "true"))
 	double Fz;
 
 	/** Suspension Force */
-	UPROPERTY(EditDefaultsOnly, Category = "Forces", meta = (MultiLine = "true"))
+	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Forces", meta = (MultiLine = "true"))
 	FVector FzVec;
 
 	/** Please add a variable description */
-	UPROPERTY(EditDefaultsOnly, Category = "RayCast Setup", meta = (MultiLine = "true"))
+	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "RayCastSetup", meta = (MultiLine = "true"))
 	double W_RayTotalDegree;
 
 	/** Please add a variable description */
-	UPROPERTY(EditDefaultsOnly, Category = "Ray Cast Setup", meta = (MultiLine = "true"))
+	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "RayCastSetup", meta = (MultiLine = "true"))
 	double W_RayCountPerDepth;
 
 	/** Please add a variable description */
-	UPROPERTY(EditDefaultsOnly, Category = "Ray Cast Setup", meta = (MultiLine = "true"))
+	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "RayCastSetup", meta = (MultiLine = "true"))
 	int32 W_RayYaxisDepth;
-public:
+
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "RayCast", meta = (MultiLine = "true"))
 	FHitResult HitResult;
-private:
+
 	/** Please add a variable description */
-	UPROPERTY(EditDefaultsOnly, Category = "RayCast", meta = (MultiLine = "true"))
+	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "RayCast", meta = (MultiLine = "true"))
 	TArray<FHitResult> HitResults;
 
 	/** Please add a variable description */
-	UPROPERTY(EditDefaultsOnly, Category = "RayCast", meta = (MultiLine = "true"))
+	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "RayCast", meta = (MultiLine = "true"))
 	bool WheelContact;
 
 	/** Please add a variable description */
-	UPROPERTY(EditDefaultsOnly, Category = "RayCast", meta = (MultiLine = "true"))
+	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "RayCast", meta = (MultiLine = "true"))
 	TArray<bool> WheelContacts;
 
 	/** Please add a variable description */
-	UPROPERTY(EditDefaultsOnly, Category = "RayCast", meta = (MultiLine = "true"))
+	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "RayCast", meta = (MultiLine = "true"))
 	TArray<FVector> HitLocations;
 
 	/** Please add a variable description */
-	UPROPERTY(EditDefaultsOnly, Category = "RayCast", meta = (MultiLine = "true"))
+	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "RayCast", meta = (MultiLine = "true"))
 	TArray<double> HitDepthArray;
-public:
+
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "SuspensionData", meta = (MultiLine = "true", ExposeOnSpawn = "true"))
 	bool IsLeft;
+
+	/** Please add a variable description */
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "WheelData", meta = (MultiLine = "true"))
+	double WheelTorqueRatio;
 
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "WheelData", meta = (MultiLine = "true"))
 	double SteeringAngle;
 
 	/** Please add a variable description */
-	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Wheel Data", meta = (MultiLine = "true"))
+	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "WheelData", meta = (MultiLine = "true"))
 	FVector WheelCenterWorld;
 
 	/** cm */
-	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Suspension Data", meta = (MultiLine = "true"))
+	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "SuspensionData", meta = (MultiLine = "true"))
 	double MaxHitDepth;
 
 	/** Please add a variable description */
-	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Suspension Data", meta = (MultiLine = "true"))
+	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "SuspensionData", meta = (MultiLine = "true"))
 	FVector HitDepthVector;
 
 	/** Please add a variable description */
@@ -239,15 +243,15 @@ public:
 	double WheelAngularVelocity;
 
 	/** Please add a variable description */
-	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Wheel Data", meta = (MultiLine = "true"))
+	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "WheelData", meta = (MultiLine = "true"))
 	double LongSlipNormalized;
 
 	/** Please add a variable description */
-	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Wheel Data", meta = (MultiLine = "true"))
+	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "WheelData", meta = (MultiLine = "true"))
 	double LateralSlipNormalized;
 
 	/** Please add a variable description */
-	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Ray Cast", meta = (MultiLine = "true"))
+	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "RayCast", meta = (MultiLine = "true"))
 	TObjectPtr<USkeletalMeshComponent> WheelMesh;
 
 	/** Please add a variable description */
@@ -269,21 +273,17 @@ public:
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Default", meta = (MultiLine = "true"))
 	double SlipAngleDyn;
-private:
+
 	/** Suspension Force */
-	UPROPERTY(EditDefaultsOnly, Category = "Slip", meta = (MultiLine = "true"))
+	UPROPERTY(BlueprintReadWrite, Category = "Slip", meta = (MultiLine = "true"))
 	double Sx;
 
 	/** Suspension Force */
-	UPROPERTY(EditDefaultsOnly, Category = "Slip", meta = (MultiLine = "true"))
+	UPROPERTY(BlueprintReadWrite, Category = "Slip", meta = (MultiLine = "true"))
 	double Sy;
-public:
+
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Default", meta = (MultiLine = "true"))
 	double BrakeBias;
-
-	/** Please add a variable description */
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "WheelData", meta = (MultiLine = "true"/*, ExposeOnSpawn = "true" */ ))
-	double WheelTorqueRatio;
 		
 };

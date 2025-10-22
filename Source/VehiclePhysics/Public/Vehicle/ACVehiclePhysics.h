@@ -6,15 +6,7 @@
 #include "Vehicle.h"
 #include "SCWheel.h"
 #include "SCAxis.h"
-#include "SAxis.h"
-#include "SFuel.h"
-#include "SEngine.h"
-#include "SClutch.h"
-#include "SGearBox.h"
-#include "STransmission.h"
-#include "STurbo.h"
-#include "SNitro.h"
-#include "SBrake.h"
+#include "SMechanicalData.h"
 
 #include "ACVehiclePhysics.generated.h"
 
@@ -198,7 +190,7 @@ public:
 
 	/** N.m */
 	UFUNCTION(BlueprintPure, Category = "Get Transmission Data")
-	void GetTotalTransmissionVelocity(double& TotalTransmissionVelocity, double LocalTransmissionVelocityP);
+	void GetTotalTransmissionVelocity(double& TotalTransmissionVelocityP, double LocalTransmissionVelocityP);
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable, Category = "Set Engine Data")
@@ -226,11 +218,11 @@ public:
 
 	/** N.m */
 	UFUNCTION(BlueprintPure, Category = "Get Transmission Data")
-	void GetTotalTractionTorque(double& TotalTransmissionDriveTorque, double TotalDriveTorqueP);
+	void GetTotalTractionTorque(double& TotalTransmissionDriveTorqueP, double TotalDriveTorqueP);
 
 	/** N.m */
 	UFUNCTION(BlueprintPure, Category = "Get Transmission Data")
-	void GetTotalFrictionTorque(double& TotalTransmissionFrictionTorque, double TotalFrictionTorqueP);
+	void GetTotalFrictionTorque(double& TotalTransmissionFrictionTorqueP, double TotalFrictionTorqueP);
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintPure, Category = "Misc")
@@ -238,7 +230,7 @@ public:
 public:
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Mechanical Setup", meta = (MultiLine = "true"))
-	TArray<FSAxis> AxisSetup;
+	FSMechanicalData MechanicalData;
 private:
 	/** Please add a variable description */
 	UPROPERTY(EditDefaultsOnly, Category = "InputValues", meta = (MultiLine = "true"))
@@ -346,36 +338,12 @@ public:
 	TArray<USkeletalMeshComponent*> WheelMeshArray;
 
 	/** Please add a variable description */
-	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Mechanical Setup", meta = (MultiLine = "true"))
-	FSFuel FuelData;
-
-	/** Please add a variable description */
-	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Mechanical Setup", meta = (MultiLine = "true"))
-	FSEngine EngineData;
-
-	/** Please add a variable description */
-	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Mechanical Setup", meta = (MultiLine = "true"))
-	FSClutch ClutchData;
-
-	/** Please add a variable description */
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Turbo Data", meta = (MultiLine = "true", UIMin = "0", ClampMin = "0", UIMax = "1", ClampMax = "1"))
 	double TurboBoostMultiplier;
 
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Turbo Data", meta = (MultiLine = "true"))
 	bool CanTurboDecrease;
-
-	/** Please add a variable description */
-	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Mechanical Setup", meta = (MultiLine = "true"))
-	FSGearBox GearBoxData;
-
-	/** Please add a variable description */
-	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Mechanical Setup", meta = (MultiLine = "true"))
-	FSTransmission TransmissionData;
-
-	/** Please add a variable description */
-	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Mechanical Setup", meta = (MultiLine = "true"))
-	FSTurbo TurboData;
 
 	/** cm^3 / s */
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Fuel Data", meta = (MultiLine = "true"))
@@ -408,10 +376,6 @@ public:
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Nitro Data", meta = (MultiLine = "true", UIMin = "0", ClampMin = "0", ClampMax = "1", UIMax = "1"))
 	double NitroBoostMultiplier;
-
-	/** Please add a variable description */
-	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Mechanical Setup", meta = (MultiLine = "true"))
-	FSNitro NitroData;
 
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Nitro Data", meta = (MultiLine = "true"))
@@ -495,10 +459,6 @@ public:
 	TArray<USCAxis*> RearAxis;
 
 	/** Please add a variable description */
-	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Mechanical Setup", meta = (MultiLine = "true"))
-	FSBrake BrakeData;
-
-	/** Please add a variable description */
 	/*DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FPlayTurboLoadSound, USoundBase*, TurboSound);
 	UPROPERTY(BlueprintAssignable, EditDefaultsOnly, Category = "Default")
 	FPlayTurboLoadSound PlayTurboLoadSound;*/
@@ -506,9 +466,5 @@ public:
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Turbo Data")
 	double TurboSoundRatio;
-
-	/** Please add a variable description */
-	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Gear Box Data", meta = (MultiLine = "true"))
-	EGearBoxType GearBoxType;
 
 };

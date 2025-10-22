@@ -192,7 +192,7 @@ void UACVehiclePhysics::CalcTransmissionTorque(double ClutchTorqueP)
 {
 }
 
-void UACVehiclePhysics::GetTotalTransmissionVelocity(double& TotalTransmissionVelocity, double LocalTransmissionVelocityP)
+void UACVehiclePhysics::GetTotalTransmissionVelocity(double& TotalTransmissionVelocityP, double LocalTransmissionVelocityP)
 {
 }
 
@@ -220,11 +220,11 @@ void UACVehiclePhysics::CalcClutch(double EngineTorqueP, double& ClutchTorqueP)
 {
 }
 
-void UACVehiclePhysics::GetTotalTractionTorque(double& TotalTransmissionDriveTorque, double TotalDriveTorqueP)
+void UACVehiclePhysics::GetTotalTractionTorque(double& TotalTransmissionDriveTorqueP, double TotalDriveTorqueP)
 {
 }
 
-void UACVehiclePhysics::GetTotalFrictionTorque(double& TotalTransmissionFrictionTorque, double TotalFrictionTorqueP)
+void UACVehiclePhysics::GetTotalFrictionTorque(double& TotalTransmissionFrictionTorqueP, double TotalFrictionTorqueP)
 {
 }
 
