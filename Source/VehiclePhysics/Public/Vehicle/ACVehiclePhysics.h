@@ -285,14 +285,14 @@ public:
 	bool CanIgnite;
 
 	/** Please add a variable description */
-	/*DECLARE_DYNAMIC_MULTICAST_DELEGATE(FEngineStarted);
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FEngineStarted);
 	UPROPERTY(BlueprintAssignable, EditDefaultsOnly, Category = "Default", meta = (MultiLine = "true"))
-	FEngineStarted EngineStarted;*/
+	FEngineStarted EngineStarted;
 
 	/** Please add a variable description */
-	/*DECLARE_DYNAMIC_MULTICAST_DELEGATE(FEngineStopped);
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FEngineStopped);
 	UPROPERTY(BlueprintAssignable, EditDefaultsOnly, Category = "Default", meta = (MultiLine = "true"))
-	FEngineStopped EngineStopped;*/
+	FEngineStopped EngineStopped;
 
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Engine Data", meta = (MultiLine = "true"))
@@ -304,9 +304,9 @@ public:
 	FEngineExploded EngineExploded;
 
 	/** Please add a variable description */
-	/*DECLARE_DYNAMIC_MULTICAST_DELEGATE(FTriggerBackfire);
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FTriggerBackfire);
 	UPROPERTY(BlueprintAssignable, EditDefaultsOnly, Category = "Default", meta = (MultiLine = "true"))
-	FTriggerBackfire TriggerBackfire;*/
+	FTriggerBackfire TriggerBackfire;
 private:
 	/** Please add a variable description */
 	UPROPERTY(EditDefaultsOnly, Category = "Gear Box Data", meta = (MultiLine = "true"))
@@ -317,9 +317,9 @@ public:
 	bool GearChange;
 
 	/** Please add a variable description */
-	/*DECLARE_DYNAMIC_MULTICAST_DELEGATE(FGearChanged);
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FGearChanged);
 	UPROPERTY(BlueprintAssignable, EditDefaultsOnly, Category = "Default", meta = (MultiLine = "true"))
-	FGearChanged GearChanged;*/
+	FGearChanged GearChanged;
 
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Brake Data", meta = (MultiLine = "true"))
@@ -386,9 +386,9 @@ public:
 	double TempTurboPressure;
 
 	/** Please add a variable description */
-	/*DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FTriggerNitrous, bool, Enable);
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FTriggerNitrous, bool, Enable);
 	UPROPERTY(BlueprintAssignable, EditDefaultsOnly, Category = "Default", meta = (MultiLine = "true"))
-	FTriggerNitrous TriggerNitrous;*/
+	FTriggerNitrous TriggerNitrous;
 private:
 	/** Please add a variable description */
 	UPROPERTY(EditDefaultsOnly, Category = "Transmission Data", meta = (MultiLine = "true"))
@@ -459,9 +459,9 @@ public:
 	TArray<USCAxis*> RearAxis;
 
 	/** Please add a variable description */
-	/*DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FPlayTurboLoadSound, USoundBase*, TurboSound);
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FPlayTurboLoadSound, USoundBase*, TurboSound);
 	UPROPERTY(BlueprintAssignable, EditDefaultsOnly, Category = "Default")
-	FPlayTurboLoadSound PlayTurboLoadSound;*/
+	FPlayTurboLoadSound PlayTurboLoadSound;
 
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Turbo Data")

@@ -1,7 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
-
+#include "SCAxis.h"
 #include "SCWheel.h"
 
 // Sets default values for this component's properties
@@ -54,6 +54,7 @@ void USCWheel::ResetHitValues()
 
 void USCWheel::GetAxis(USCAxis*& Axis)
 {
+	Axis = Cast<USCAxis>(this->GetAttachParent());
 }
 
 void USCWheel::GetAxisSetup(FSAxis& AxisSetup)

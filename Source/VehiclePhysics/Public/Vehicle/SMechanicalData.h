@@ -9,14 +9,15 @@
 #include "SNitro.h"
 #include "SBrake.h"
 #include "SAxis.h"
+#include "Engine/DataTable.h"
 
 #include "SMechanicalData.generated.h"
 
 /** Please add a struct description */
 USTRUCT(BlueprintType)
-struct FSMechanicalData
+struct FSMechanicalData : public FTableRowBase
 {
-	GENERATED_BODY()
+	GENERATED_USTRUCT_BODY()
 public:
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (DisplayName = "EngineData", MakeStructureDefaultValue = "(EngineType=I4,IsEngineStarted=False,TorqueCurve=\" / Script / Engine.CurveFloat'/Game/Blueprints/Curves/EngineTorqueCurve.EngineTorqueCurve'\",EngineVolume=2.000000,IdleRPM=750.000000,CurrentRPM=0.000000,MaxRPM=8000.000000,EnergyCoefficient=0.750000,FlywheelRadius=0.500000,FlywheelMass=2.400000,RevLimiterDuration=0.050000,CurrentTemperature=0.000000,AvgTemp=70.000000,MaxTemp=110.000000,EngineHealth=100.000000)"))
