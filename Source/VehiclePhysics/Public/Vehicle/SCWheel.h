@@ -124,7 +124,7 @@ public:
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable, Category = "Default")
-	void SetBrakeTorque(double BrakeValue, bool HandbrakeValue);
+	void SetBrakeTorque(double BrakeValue, bool bHandbrakeValue);
 public:
 	/** cm */
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "SuspensionData", meta = (MultiLine = "true"))

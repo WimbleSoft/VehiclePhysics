@@ -1,8 +1,9 @@
 #pragma once
 
 #include "SCWheel.h"
+#include "Vehicle.h"
 #include "SCAxis.h"
-
+#include "Kismet/KismetStringLibrary.h"
 // Sets default values for this component's properties
 USCWheel::USCWheel()
 {
@@ -58,14 +59,33 @@ void USCWheel::GetAxis(USCAxis*& Axis)
 
 void USCWheel::GetAxisSetup(FSAxis& AxisSetup)
 {
+	USCAxis* Axis = nullptr;
+	GetAxis(Axis);
+	if (Axis)
+	{
+		AxisSetup = Axis->AxisSetup;
+	}
 }
 
 void USCWheel::GetSuspensionSetup(FSSuspension& Suspension)
 {
+	USCAxis* Axis = nullptr;
+	GetAxis(Axis);
+	if (Axis)
+	{
+		Suspension = Axis->AxisSetup.Suspension;
+	}
 }
 
 void USCWheel::GetWheelSetup(FSWheel& Wheel)
 {
+	USCAxis* Axis = nullptr;
+	GetAxis(Axis);
+	if (Axis)
+	{
+		Wheel = Axis->AxisSetup.Wheel;
+	}
+	
 }
 
 void USCWheel::DrawDebugLines()
@@ -78,6 +98,15 @@ void USCWheel::GetWheelLinearVelocityLocal(FVector& WheelLinearVelocityLocal)
 
 FText USCWheel::GetSuspensionTag()
 {
+	USCAxis* Axis = nullptr;
+	GetAxis(Axis);
+	if (Axis)
+	{
+		FString AxisName = UKismetStringLibrary::GetSubstring(Axis->AxisSetup.AxisName.ToString(), 10, 1);
+		AxisName.Append(IsLeft ? "L" : "R");
+
+		return FText::FromString(AxisName);
+	}
 	return FText();
 }
 
@@ -111,6 +140,17 @@ void USCWheel::SetTireForceCombined()
 
 void USCWheel::GetVehiclePhysics(UACVehiclePhysics*& VehiclePhysics)
 {
+	USCAxis* Axis = nullptr;
+	GetAxis(Axis);
+	if (Axis)
+	{
+		AVehicle* Vehicle = nullptr;
+		Axis->GetVehicle(Vehicle);
+		if (Vehicle)
+		{
+			VehiclePhysics = Vehicle->ACVehiclePhysics;
+		}
+	}
 }
 
 void USCWheel::ApplyTireForce()
@@ -133,7 +173,7 @@ void USCWheel::SetFrictionTorque()
 {
 }
 
-void USCWheel::SetBrakeTorque(double BrakeValue, bool HandbrakeValue)
+void USCWheel::SetBrakeTorque(double BrakeValue, bool bHandbrakeValue)
 {
 }
 
