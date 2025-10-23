@@ -1,7 +1,10 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
+#pragma once
 
-#include "Vehicle/SCAxis.h"
+#include "SCAxis.h"
+#include "Vehicle.h"
+#include "SCWheel.h"
 
 // Sets default values for this component's properties
 USCAxis::USCAxis()
@@ -38,17 +41,18 @@ void USCAxis::CreateSuspensions()
 
 void USCAxis::GetVehicle(AVehicle*& CarActor)
 {
+	CarActor = Cast<AVehicle>(this->GetAttachParent()->GetOwner());
 }
 
 void USCAxis::CalcFrictionTorqueFeedbackRatioBias(USCWheel* Suspension, UPARAM(ref)TArray<USCWheel*>& AllSuspensions, double& OutputPin)
 {
 }
 
-void USCAxis::GetCurrentAxisVelocity(double& AxisVelocity, double TotalAngularVelocity)
+void USCAxis::GetCurrentAxisVelocity(double& AxisVelocityP, double TotalAngularVelocityP)
 {
 }
 
-void USCAxis::SetAxisDriveTorque(UPARAM(ref) double& TotalDriveTorque)
+void USCAxis::SetAxisDriveTorque(UPARAM(ref) double& TotalDriveTorqueP)
 {
 }
 

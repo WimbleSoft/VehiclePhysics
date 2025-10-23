@@ -1,10 +1,9 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
-#include "CoreMinimal.h"
 #include "Components/SceneComponent.h"
+#include "CoreMinimal.h"
 #include "SAxis.h"
+#include "SCWheel.h"
 
 #include "SCAxis.generated.h"
 
@@ -40,11 +39,11 @@ public:
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintPure)
-	void GetCurrentAxisVelocity(double& AxisVelocity, double TotalAngularVelocity);
+	void GetCurrentAxisVelocity(double& AxisVelocityP, double TotalAngularVelocityL);
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable)
-	void SetAxisDriveTorque(UPARAM(ref) double& TotalDriveTorque);
+	void SetAxisDriveTorque(UPARAM(ref) double& TotalDriveTorqueP);
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable)
