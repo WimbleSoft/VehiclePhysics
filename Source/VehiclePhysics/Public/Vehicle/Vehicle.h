@@ -36,12 +36,16 @@ public:
 
 public:
 	/** Scene Component Creation Functions */
-	UFUNCTION(BlueprintCallable, Category = "SC Creation")
-	void CreateSuspension(bool IsLeftP, USCAxis* AxisP, double WheelTorqueRatio, USCWheel*& SuspensionP);
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "SC Creation")
+	void CreateSuspension(bool bIsLeft, USCAxis* InAxis, double InWheelTorqueRatio, USCWheel*& OutSuspension);
 
 	/** Please add a function description */
-	UFUNCTION(BlueprintCallable, Category = "SC Creation")
-	USCAxis* CreateAxis(FSAxis AxisDataP);
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "SC Creation")
+	USCAxis* CreateAxis(FSAxis InAxisData);
+
+	/** Scene Component Creation Functions */
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "SC Creation")
+	void CreateWheelMesh(USCWheel* InSuspension, USkeletalMeshComponent*& OutWheelMesh);
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable, Category = "Camera Handling")
@@ -128,16 +132,12 @@ public:
 	void CreateMirrors();
 
 	/** Scene Component Creation Functions */
-	UFUNCTION(BlueprintCallable, Category = "SC Creation")
-	void CreateWheelMesh(USCWheel* SuspensionP, USkeletalMeshComponent*& WheelMeshP);
-
-	/** Scene Component Creation Functions */
 	UFUNCTION(BlueprintCallable, Category = "Component Construction")
 	void CreateTireSounds();
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable, Category = "Particle Handling")
-	void TriggerNitrous(bool EnableP);
+	void TriggerNitrous(bool bEnableP);
 public:
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Category = "Default")

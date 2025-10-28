@@ -26,9 +26,58 @@ public:
 	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 public:
+
+	UFUNCTION(BlueprintCallable, Category = "Default")
+	void ConstructSuspension();
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Default")
+	void UpdatePhysics(const double& InDeltaTime);
+
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable)
 	void RadialMultiRayCast();
+
+	/** Please add a function description */
+	UFUNCTION(BlueprintCallable)
+	void SetSpringLength();
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	FLinearColor GetTraceColorByRayCurrentYAxisDepthIndex(int32 InCurrentYAxisDepthIndex) const;
+
+	/** Please add a function description */
+	UFUNCTION(BlueprintCallable)
+	void CreateLineTraceForHitResults(FLinearColor TraceColor, const FVector Start, const FVector End);
+
+	/** Rotate RayEnd Point around Y Axis to have circle effect around wheel. */
+	UFUNCTION(BlueprintPure, BlueprintCallable)
+	FVector GetRotateRayEndPointAroundYAxis(int32 RayIndexOnXAxis);
+
+	/**
+	 * Rotate Ray End vector offset around X axis to
+	 * have Wheel Camber angle effect on WheelCenter
+	 */
+	UFUNCTION(BlueprintPure, BlueprintCallable)
+	FVector GetRotateRayEndVectorOffsetAroundXAxis(FVector RayEndVector);
+
+	/** Rotate RayEnd Around Z axis to have wheel steering effect on RayEnd point. */
+	UFUNCTION(BlueprintPure, BlueprintCallable)
+	FVector GetRotateRayEndAroundZAxis(FVector RayEndVector);
+
+	/** Rotate RayStart around Z axis to have wheel steering effect on RayStart point. */
+	UFUNCTION(BlueprintPure, BlueprintCallable)
+	FVector GetRotateRayStartAroundZAxis(FVector RayStartVector);
+
+	/** Y axis depth offset for having RayStart points spread across wheel width. */
+	UFUNCTION(BlueprintPure, BlueprintCallable)
+	FVector GetYAxisDepthOffset(int32 RayIndexOnYAxis);
+
+	/** Rotate Ray Start offset vector around X axis to have Wheel Camber angle effect on WheelCenter. */
+	UFUNCTION(BlueprintPure, BlueprintCallable)
+	FVector GetRotateRayStartOffsetVectorAroundXAxis(FVector RayStartVector);
+
+	/** Add Y_Axis offset to RayStart offset caused by AxisSlopeAngle */
+	UFUNCTION(BlueprintPure, BlueprintCallable)
+	FVector GetYAxisOffsetToRayStartForAxisSlopeAngle();
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable)
@@ -124,7 +173,8 @@ public:
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable, Category = "Default")
-	void SetBrakeTorque(double BrakeValue, bool bHandbrakeValue);
+	void SetBrakeTorque(double bBrakeValue, bool bHandbrakeValue);
+
 public:
 	/** cm */
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "SuspensionData", meta = (MultiLine = "true"))
@@ -180,7 +230,7 @@ public:
 
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "RayCast", meta = (MultiLine = "true"))
-	bool WheelContact;
+	bool bWheelContact;
 
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "RayCast", meta = (MultiLine = "true"))
@@ -192,11 +242,11 @@ public:
 
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "RayCast", meta = (MultiLine = "true"))
-	TArray<double> HitDepthArray;
+	TArray<float> HitDepthArray;
 
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "SuspensionData", meta = (MultiLine = "true", ExposeOnSpawn = "true"))
-	bool IsLeft;
+	bool bIsLeft;
 
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "WheelData", meta = (MultiLine = "true"))

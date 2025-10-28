@@ -25,6 +25,9 @@ public:
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
 public:
+	UFUNCTION(BlueprintCallable)
+	void Construct();
+
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable)
 	void CreateSuspensions();
@@ -39,15 +42,15 @@ public:
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintPure)
-	void GetCurrentAxisVelocity(double& AxisVelocityP, double TotalAngularVelocityL);
+	void GetCurrentAxisVelocity(double& AxisVelocity);
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable)
-	void SetAxisDriveTorque(UPARAM(ref) double& TotalDriveTorqueP);
+	void SetAxisDriveTorque(UPARAM(ref) double& InTotalDriveTorqueP);
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable)
-	void CalcWheelDriveTorque(double AxisTractionTorqueL);
+	void CalcWheelDriveTorque(double InAxisTractionTorque);
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable)
@@ -55,11 +58,11 @@ public:
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintPure)
-	void GetCurrentAxisFrictionTorque(double& AxisFrictionTorqueL, double TotalAxisFrictionTorqueL);
+	void GetCurrentAxisFrictionTorque(double& InAxisFrictionTorque);
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintPure)
-	void GetCurrentAxisTractionTorque(double& AxisTractionTorqueL, double TotalAxisTractionTorqueL);
+	void GetCurrentAxisTractionTorque(double& InAxisTractionTorque);
 public:
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Default", meta = (MultiLine = "true", ExposeOnSpawn = "true"))

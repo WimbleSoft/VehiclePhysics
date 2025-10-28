@@ -128,13 +128,17 @@ void AVehicle::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetime
 	DOREPLIFETIME(AVehicle, ReverseLightsOn);
 }
 
-void AVehicle::CreateSuspension(bool IsLeftP, USCAxis* AxisP, double WheelTorqueRatio, USCWheel*& SuspensionP)
+void AVehicle::CreateSuspension_Implementation(bool bIsLeft, USCAxis* InAxis, double InWheelTorqueRatio, USCWheel*& OutSuspension)
 {
 }
 
-USCAxis* AVehicle::CreateAxis(FSAxis AxisDataP)
+USCAxis* AVehicle::CreateAxis_Implementation(FSAxis InAxisData)
 {
 	return nullptr;
+}
+
+void AVehicle::CreateWheelMesh_Implementation(USCWheel* InSuspension, USkeletalMeshComponent*& OutWheelMesh)
+{
 }
 
 void AVehicle::HandleCameraLookUp(double DeltaRotationPitchP)
@@ -167,10 +171,25 @@ void AVehicle::HandeHeadAndTailLights()
 
 void AVehicle::GetWorldTemperature(double& TempP)
 {
+	TempP = 25.0;
 }
 
 void AVehicle::ConstructGearBox()
 {
+	switch (ACVehiclePhysics->MechanicalData.GearBoxData.GearBoxType)
+	{
+		case EGearBoxType::FullAuto:
+			ACVehiclePhysics->SetUseAutoGearBox(true);
+			break;
+		case EGearBoxType::Sequential:
+			ACVehiclePhysics->SetUseAutoGearBox(false);
+			break;
+		case EGearBoxType::HShifter:
+			ACVehiclePhysics->SetUseAutoGearBox(false);
+			break;
+	default:
+		break;
+	}
 }
 
 void AVehicle::OnRep_HeadLightsFarOn_Implementation()
@@ -221,15 +240,11 @@ void AVehicle::CreateMirrors()
 {
 }
 
-void AVehicle::CreateWheelMesh(USCWheel* SuspensionP, USkeletalMeshComponent*& WheelMeshP)
-{
-}
-
 void AVehicle::CreateTireSounds()
 {
 }
 
-void AVehicle::TriggerNitrous(bool EnableP)
+void AVehicle::TriggerNitrous(bool bEnableP)
 {
 }
 
