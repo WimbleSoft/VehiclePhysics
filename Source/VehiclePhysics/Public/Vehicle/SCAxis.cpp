@@ -46,8 +46,7 @@ void USCAxis::Construct()
 
 void USCAxis::CreateSuspensions()
 {
-	AVehicle* Vehicle = nullptr;
-	GetVehicle(Vehicle);
+	AVehicle* Vehicle = GetVehicle();
 
 	if (Vehicle == nullptr)
 	{
@@ -72,9 +71,9 @@ void USCAxis::CreateSuspensions()
 
 }
 
-void USCAxis::GetVehicle(AVehicle*& CarActor)
+AVehicle* USCAxis::GetVehicle()
 {
-	CarActor = Cast<AVehicle>(this->GetAttachParent()->GetOwner());
+	return Cast<AVehicle>(this->GetAttachParent()->GetOwner());
 }
 
 void USCAxis::CalcFrictionTorqueFeedbackRatioBias(USCWheel* Suspension, UPARAM(ref)TArray<USCWheel*>& AllSuspensions, double& OutputPin)
@@ -82,13 +81,15 @@ void USCAxis::CalcFrictionTorqueFeedbackRatioBias(USCWheel* Suspension, UPARAM(r
 	OutputPin = Suspension->WheelFrictionTorque;
 }
 
-void USCAxis::GetCurrentAxisVelocity(double& AxisVelocity)
+double USCAxis::GetCurrentAxisVelocity()
 {
-	AxisVelocity = 0.0;
+	double AxisVelocity = 0.0;
 	for(USCWheel* Suspension : Suspensions)
 	{
 		AxisVelocity += Suspension->WheelAngularVelocity;
 	}
+
+	return AxisVelocity;
 }
 
 void USCAxis::SetAxisDriveTorque(UPARAM(ref) double& InTotalDriveTorque)
@@ -113,19 +114,16 @@ void USCAxis::CalcWheelDriveTorque(double InAxisTractionTorque)
 
 void USCAxis::PrintDebug()
 {
+	AVehicle* Vehicle = GetVehicle();
 	double DriveTorque = AxisTractionTorque;               // AT
-	double FrictionTorque = 0;
-	GetCurrentAxisFrictionTorque(FrictionTorque);// FT
-	double AxisVelRadS = 0;
-	GetCurrentAxisVelocity(AxisVelRadS);// AV
+	double FrictionTorque = GetCurrentAxisFrictionTorque();// FT
+	double AxisVelRadS = GetCurrentAxisVelocity();// AV
 
 	double AxisVelRpm = 0;// ARPM
-	AVehicle* Vehicle = nullptr;
-	GetVehicle(Vehicle);
 
 	if (Vehicle != nullptr)
 	{
-		Vehicle->ACVehiclePhysics->RadSToRpm(AxisVelRadS, AxisVelRpm);
+		AxisVelRpm = Vehicle->ACVehiclePhysics->RadSToRpm(AxisVelRadS);
 	}
 	else
 	{
@@ -155,22 +153,26 @@ void USCAxis::PrintDebug()
 	UE_LOG(LogTemp, Log, TEXT("%s"), *Msg.ToString());
 }
 
-void USCAxis::GetCurrentAxisFrictionTorque(double& InAxisFrictionTorque)
+double USCAxis::GetCurrentAxisFrictionTorque()
 {
-	InAxisFrictionTorque = 0;
+	double AxisFrictionTorqueL = 0;
 	for(USCWheel* Suspension : Suspensions)
 	{
-		InAxisFrictionTorque += Suspension->WheelFrictionTorque * Suspension->WheelTorqueRatio;
+		AxisFrictionTorqueL += Suspension->WheelFrictionTorque * Suspension->WheelTorqueRatio;
 	}
+
+	return AxisFrictionTorqueL;
 }
 
-void USCAxis::GetCurrentAxisTractionTorque(double& InAxisTractionTorque)
+double USCAxis::GetCurrentAxisTractionTorque()
 {
-	InAxisTractionTorque = 0;
+	double AxisTractionTorqueL = 0;
 
 	for(USCWheel* Suspension : Suspensions)
 	{
-		InAxisTractionTorque += Suspension->WheelTractionTorque * Suspension->WheelTorqueRatio;
+		AxisTractionTorqueL += Suspension->WheelTractionTorque * Suspension->WheelTorqueRatio;
 	}
+
+	return AxisTractionTorqueL;
 }
 

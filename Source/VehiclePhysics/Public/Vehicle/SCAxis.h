@@ -34,15 +34,15 @@ public:
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintPure)
-	void GetVehicle(AVehicle*& CarActor);
+	AVehicle* GetVehicle();
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintPure)
 	void CalcFrictionTorqueFeedbackRatioBias(USCWheel* Suspension, UPARAM(ref) TArray<USCWheel*>& AllSuspensions, double& OutputPin);
 
 	/** Please add a function description */
-	UFUNCTION(BlueprintPure)
-	void GetCurrentAxisVelocity(double& AxisVelocity);
+	UFUNCTION(BlueprintPure, meta = (ReturnDisplayName = "AxisVelocity"))
+	double GetCurrentAxisVelocity();
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable)
@@ -57,12 +57,12 @@ public:
 	void PrintDebug();
 
 	/** Please add a function description */
-	UFUNCTION(BlueprintPure)
-	void GetCurrentAxisFrictionTorque(double& InAxisFrictionTorque);
+	UFUNCTION(BlueprintPure, meta = (ReturnDisplayName = "CurrentAxisFrictionTorque"))
+	double GetCurrentAxisFrictionTorque();
 
 	/** Please add a function description */
-	UFUNCTION(BlueprintPure)
-	void GetCurrentAxisTractionTorque(double& InAxisTractionTorque);
+	UFUNCTION(BlueprintPure, meta = (ReturnDisplayName = "CurrentAxisTractionTorque"))
+	double GetCurrentAxisTractionTorque();
 public:
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Default", meta = (MultiLine = "true", ExposeOnSpawn = "true"))

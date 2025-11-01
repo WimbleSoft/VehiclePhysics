@@ -27,13 +27,18 @@ public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 public:
+
 	/** Please add a function description */
-	UFUNCTION(BlueprintPure, Category = "Read Data")
-	void GetAxisSockets(TArray<FName>& AxisSockets);
+	UFUNCTION(BlueprintCallable, Category = "Default")
+	void ConstructVehiclePhysics();
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintPure, Category = "Read Data")
-	void GetVehicle(AVehicle*& VehicleActor);
+	TArray<FName> GetAxisSockets();
+
+	/** Please add a function description */
+	UFUNCTION(BlueprintPure, Category = "Read Data")
+	AVehicle* GetVehicle() const;
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable, Category = "InputHandling")
@@ -43,16 +48,16 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Input Handling")
 	void SetThrottleInput(double Throttle);
 
-	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Engine Handling")
+	UFUNCTION(BlueprintCallable, BlueprintCallable, Category = "Engine Handling")
 	void StartEngine();
 
-	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Engine Handling")
+	UFUNCTION(BlueprintCallable, BlueprintCallable, Category = "Engine Handling")
 	void StopEngine();
 
-	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Engine Handling")
+	UFUNCTION(BlueprintCallable, Category = "Engine Handling")
 	void FixEngine();
 
-	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Engine Handling")
+	UFUNCTION(BlueprintCallable, Category = "Engine Handling")
 	void KillEngine();
 
 	/** Please add a function description */
@@ -65,7 +70,7 @@ public:
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintPure, Category = "ReadData")
-	void GetSuspensions(TArray<USCWheel*>& OutSuspensions);
+	TArray<USCWheel*> GetSuspensions();
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable, Category = "SC_Creator")
@@ -78,10 +83,6 @@ public:
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable, Category = "Set Engine Data")
 	void SetLoad();
-
-	/** Please add a function description */
-	UFUNCTION(BlueprintCallable, Category = "Set Engine Data")
-	void CalcEngine(double& EngineTorqueP, double RestOrIdleKineticEnergyP, double MaxKineticEnergyP, double LocalEngineTorqueP);
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable, Category = "Set Engine Data")
@@ -106,8 +107,8 @@ public:
     double GetForwardSpeed();
 
 	/** Please add a function description */
-	UFUNCTION(BlueprintPure, Category = "Read Data")
-	void GetCurrentGear(int32& CurrentGear) const;
+	UFUNCTION(BlueprintPure, Category = "Read Data", meta = (ReturnDisplayName = "CurrentGear"))
+	int GetCurrentGear() const;
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable, Category = "Set Gear Data")
@@ -118,7 +119,7 @@ public:
 	void SetGearDown();
 
 	/** Please add a function description */
-	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Set Gear Data")
+	UFUNCTION(BlueprintCallable, Category = "Set Gear Data")
 	void SetGear(int32 InCurrentGear);
 
 	/** Please add a function description */
@@ -126,24 +127,24 @@ public:
 	void SetUseAutoGearBox(bool bIsUsingAutoGearBox);
 
 	/** Please add a function description */
-	UFUNCTION(BlueprintPure, Category = "Read Data")
-	void GetSteeringValue(double& OutSteeringValue) const;
+	UFUNCTION(BlueprintPure, Category = "Read Data", meta = (ReturnDisplayName = "SteeringValue"))
+	double GetSteeringValue() const;
 
 	/** Please add a function description */
-	UFUNCTION(BlueprintPure, Category = "UnitConversion")
-	void RpmToRadS(double Rpm, double& RadS);
+	UFUNCTION(BlueprintPure, Category = "UnitConversion", meta = (ReturnDisplayName = "RadS"))
+	double RpmToRadS(double Rpm) const;
 
 	/** Please add a function description */
-	UFUNCTION(BlueprintPure, Category = "UnitConversion")
-	void RadSToRpm(double RadS, double& Rpm);
+	UFUNCTION(BlueprintPure, Category = "UnitConversion", meta = (ReturnDisplayName = "Rpm"))
+	double RadSToRpm(double RadS) const;
 
 	/** Please add a function description */
-	UFUNCTION(BlueprintPure, Category = "UnitConversion")
-	void HpToWatt(double Hp, double& Watt);
+	UFUNCTION(BlueprintPure, Category = "UnitConversion", meta = (ReturnDisplayName = "Watt"))
+	double HpToWatt(double Hp) const;
 
 	/** Please add a function description */
-	UFUNCTION(BlueprintPure, Category = "Read Data")
-	void GetThrottleValue(double& ThrottleValueP);
+	UFUNCTION(BlueprintPure, Category = "Read Data", meta = (ReturnDisplayName = "ThrottleValue"))
+	double GetThrottleValue() const;
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable, Category = "SC_Creator")
@@ -153,28 +154,28 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Misc")
 	void ClearArrays();
 
-	/** Please add a function description */
-	UFUNCTION(BlueprintPure, Category = "UnitConversion")
-	void KelvinToCelsius(double Kelvin, double& Celcius);
-
 	/**
 		* Calorie to Joule (Watt*s)
 		* kg*m^2/s^2
 		*/
-	UFUNCTION(BlueprintPure, Category = "UnitConversion")
-	void CalorieToJoule(double Calorie, double& Joule);
+	UFUNCTION(BlueprintPure, Category = "UnitConversion", meta = (ReturnDisplayName = "Joule"))
+	double CalorieToJoule(double Calorie) const;
 
 	/** Please add a function description */
-	UFUNCTION(BlueprintPure, Category = "UnitConversion")
-	void CelsiusToKelvin(double Celsius, double& Kelvin);
+	UFUNCTION(BlueprintPure, Category = "UnitConversion", meta = (ReturnDisplayName = "Celcius"))
+	double KelvinToCelsius(double Kelvin) const;
+
+	/** Please add a function description */
+	UFUNCTION(BlueprintPure, Category = "UnitConversion", meta = (ReturnDisplayName = "Kelvin"))
+	double CelsiusToKelvin(double Celsius) const;
 
 	/** kW */
-	UFUNCTION(BlueprintPure, Category = "Read Data")
-	void GetCurrentPower(double& Power) const;
+	UFUNCTION(BlueprintPure, Category = "Read Data", meta = (ReturnDisplayName = "Power"))
+	double GetCurrentPower() const;
 
 	/** Revs per Minute */
-	UFUNCTION(BlueprintPure, Category = "Read Data")
-	void GetEngineRpm(double& Rpm) const;
+	UFUNCTION(BlueprintPure, Category = "Read Data", meta = (ReturnDisplayName = "Rpm"))
+	double GetEngineRpm() const;
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable, Category = "Set Fuel Data")
@@ -185,8 +186,8 @@ public:
 	void CalcNitrous(double NitrousPowerMultiplier);
 
 	/** N.m */
-	UFUNCTION(BlueprintPure, Category = "Read Data")
-	void GetTotalGearRatio(double& GearRatio);
+	UFUNCTION(BlueprintPure, Category = "Read Data", meta = (ReturnDisplayName = "GearRatio"))
+	double GetTotalGearRatio();
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable, Category = "InputHandling")
@@ -201,16 +202,16 @@ public:
 	void PrintDebug();
 
 	/** Please add a function description */
-	UFUNCTION(BlueprintPure, Category = "UnitConversion")
-	void CmsToKmh(double Cms, double& Kmh);
+	UFUNCTION(BlueprintPure, Category = "UnitConversion", meta = (ReturnDisplayName = "Kmh"))
+	double CmsToKmh(double Cms) const;
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable, Category = "Set Transmission Data")
 	void CalcTransmissionTorque(double ClutchTorqueP);
 
 	/** N.m */
-	UFUNCTION(BlueprintPure, Category = "Get Transmission Data")
-	void GetTotalTransmissionVelocity(double& TotalTransmissionVelocity);
+	UFUNCTION(BlueprintPure, Category = "Get Transmission Data", meta = (ReturnDisplayName = "TotalTransmissionVelocity"))
+	double GetTotalTransmissionVelocity();
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable, Category = "Set Engine Data")
@@ -218,7 +219,7 @@ public:
 
 	/** N.m */
 	UFUNCTION(BlueprintPure, Category = "Get Transmission Data")
-	void GetTotalFrictionAcceleration(double& Output_Get);
+	double GetTotalFrictionAcceleration();
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable, Category = "Set Transmission Data")
@@ -233,20 +234,24 @@ public:
 	void InitBrakeRatios();
 
 	/** Please add a function description */
-	UFUNCTION(BlueprintCallable, Category = "Set Clutch Data")
-	void CalcClutch(double InEngineTorque, double& OutClutchTorque);
-
-	/** N.m */
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Get Transmission Data")
-	void GetTotalTractionTorque(double& TotalTransmissionDriveTorque);
-
-	/** N.m */
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Get Transmission Data")
-	void GetTotalFrictionTorque(double& TotalTransmissionFrictionTorque);
+	UFUNCTION(BlueprintCallable, Category = "Set Engine Data", meta = (ReturnDisplayName = "EngineTorque"))
+	double CalcEngine();
 
 	/** Please add a function description */
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Misc")
-	void GetWorldTemperature(double& Temp);
+	UFUNCTION(BlueprintCallable, Category = "Set Clutch Data", meta = (ReturnDisplayName = "ClutchTorque"))
+	double CalcClutch(double InEngineTorque);
+
+	/** N.m */
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Get Transmission Data", meta = (ReturnDisplayName = "TotalTransmissionDriveTorque"))
+	double GetTotalTractionTorque();
+
+	/** N.m */
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Get Transmission Data", meta = (ReturnDisplayName = "TotalTransmissionFrictionTorque"))
+	double GetTotalFrictionTorque();
+
+	/** Please add a function description */
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Misc", meta = (ReturnDisplayName = "Temp"))
+	double GetWorldTemperature() const;
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Read Data", meta = (ReturnDisplayName = "SteeringAngle"))
 	double GetSteeringAngle(float Steering, USCWheel* Suspension);
@@ -257,208 +262,239 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Read Data")
 	double DistanceOfCurrentAxisToLastAxis(FName InSocketName);
 
-	UFUNCTION(BlueprintCallable, Category = "Read Data")
+	UFUNCTION(BlueprintCallable, Category = "Set Data")
 	void SetSteeringValueByAckermannAccuracy(USCWheel* Suspension, FName SocketName, double CurrentRotationAngle, double AxisWidth);
 
+	/** kg.m^2 */
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Read Data")
+	double GetEngineInertia() const;
+
+	/** Ek = 1/2*I*ω^2 = watt*s */
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Read Data")
+	double GetEngineMinKineticEnergy() const;
+
+	/** Ek = 1/2*I*ω^2 = watt*s */
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Read Data")
+	double GetEngineMaxKineticEnergy() const;
+
+	/** ω=2*Ek/I = rad/s */
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Read Data")
+	double GetEngineMinAngularVelocity() const;
+
+	/** ω=2*Ek/I = rad/s */
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Read Data")
+	double GetEngineMaxAngularVelocity() const;
+
+	/** Ek = 1/2*I*ω^2 = watt*s */
+	UFUNCTION(BlueprintCallable, Category = "Read Data")
+	double GetCurrentEngineKineticEnergy() const;
+	
+	/** α = Δω/Δt = rad/s^2 */
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Read Data")
+	double GetEngineAngularAcceleration() const;
+
+	/** α = Δω/Δt = rad/s^2 */
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Read Data")
+	double GetEngineAngularDeceleration() const;
+
+	/**Calculate Needed Fuel Energy to Supply engine for running and calculate heat energy to increase temperature.*/
+	UFUNCTION(BlueprintCallable, Category = "Read Data")
+	double GetCurrentFuelEnergy() const;
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Read Data")
+	bool IsEngineOverheating() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Read Data")
+	void SetTurboLoadRatioAndTriggerSound(double TurboMultiplier);
+
+public:
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Mechanical Setup", meta = (MultiLine = "true"))
-	FSMechanicalData MechanicalData;
+	FSMechanicalData MechanicalData = FSMechanicalData();
 
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "InputValues", meta = (MultiLine = "true"))
-	double ThrottleValue;
+	double ThrottleValue = 0;
 
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "InputValues", meta = (MultiLine = "true"))
-	bool SmoothThrottle;
+	bool SmoothThrottle = true;
 
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "InputValues", meta = (MultiLine = "true"))
-	double BrakeValue;
+	double BrakeValue = 0;
 
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "InputValues", meta = (MultiLine = "true"))
-	bool SmoothBrake;
+	bool SmoothBrake = true;
 
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "InputValues", meta = (MultiLine = "true"))
-	double ClutchValue;
+	double ClutchValue = 0;
 
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "InputValues", meta = (MultiLine = "true"))
-	bool SmoothClutch;
+	bool SmoothClutch = true;
 
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "InputValues", meta = (MultiLine = "true", UIMin = "-1", UIMax = "1", ClampMin = "-1", ClampMax = "1"))
-	double SteeringValue;
+	double SteeringValue = 0;
 
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "References", meta = (MultiLine = "true"))
-	TArray<USCAxis*> AxisArray;
+	TArray<USCAxis*> AxisArray = TArray<USCAxis*>();
 
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Input Values", meta = (MultiLine = "true"))
-	bool SmoothSteering;
+	bool SmoothSteering = true;
 
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Input Values", meta = (MultiLine = "true"))
-	bool HandbrakeValue;
+	bool HandbrakeValue = false;
 
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Engine Data", meta = (MultiLine = "true"))
-	double Load;
+	double Load = 0;
 
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Fuel Data", meta = (MultiLine = "true"))
-	bool CanIgnite;
+	bool CanIgnite = true;
 
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Engine Data", meta = (MultiLine = "true"))
-	TArray<double> BackfireRPMs;
+	TArray<double> BackfireRPMs = TArray<double>{ 6500, 6750, 7000, 7250, 7500, 7750, 8000, 8250, 8500, 8750, 9000 };;
 
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Gear Box Data", meta = (MultiLine = "true"))
-	int32 CurrentGear;
+	int32 CurrentGear = 1;
 
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Gear Box Data", meta = (MultiLine = "true"))
-	bool GearChange;
+	bool GearChange = false;
 
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Brake Data", meta = (MultiLine = "true"))
-	bool IsBraking;
+	bool IsBraking = false;
 
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Gear Box Data", meta = (MultiLine = "true"))
-	bool UseAutoGearBox;
+	bool UseAutoGearBox = false;
 
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Input Values", meta = (MultiLine = "true"))
-	bool AckermannAccuracy;
+	bool AckermannAccuracy = true;
 
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "References", meta = (MultiLine = "true"))
-	TArray<USkeletalMeshComponent*> WheelMeshArray;
+	TArray<USkeletalMeshComponent*> WheelMeshArray = TArray<USkeletalMeshComponent*>();
 
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Turbo Data", meta = (MultiLine = "true", UIMin = "0", ClampMin = "0", UIMax = "1", ClampMax = "1"))
-	double TurboBoostMultiplier;
+	double TurboBoostMultiplier = 1;
 
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Turbo Data", meta = (MultiLine = "true"))
-	bool CanTurboDecrease;
+	bool CanTurboDecrease = false;
 
 	/** cm^3 / s */
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Fuel Data", meta = (MultiLine = "true"))
-	double FuelConsumption;
+	double FuelConsumption = 0;
+
+	/** Please add a variable description */
+	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Engine Data", meta = (MultiLine = "true"))
+	double EngineTorque = 0;
 
 	/** rad/s */
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Engine Data", meta = (MultiLine = "true"))
-	double EngineCurrentKineticEnergy;
-
-	/** Please add a variable description */
-	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Engine Data", meta = (MultiLine = "true"))
-	double EngineTorque;
-
-	/** Please add a variable description */
-	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Engine Data", meta = (MultiLine = "true"))
-	double EngineAngularAcceleration;
-
-	/** Please add a variable description */
-	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Engine Data", meta = (MultiLine = "true"))
-	double EngineAngularDeceleration;
-
-	/** rad/s */
-	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Engine Data", meta = (MultiLine = "true"))
-	double EngineAngularVelocity;
+	double EngineAngularVelocity = 0;
 
 	/** watt * s  */
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Fuel Data", meta = (MultiLine = "true"))
-	double CurrentFuelEnergy;
+	double CurrentFuelEnergy = 0;
 
 	/** Please add a variable description */
-	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Nitro Data", meta = (MultiLine = "true", UIMin = "0", ClampMin = "0", ClampMax = "1", UIMax = "1"))
-	double NitroBoostMultiplier;
+	UPROPERTY(BlueprintReadWrite, Category = "Nitro Data", meta = (MultiLine = "true", UIMin = "0", ClampMin = "0", ClampMax = "1", UIMax = "1"))
+	double NitroBoostMultiplier = 1;
 
 	/** Please add a variable description */
-	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Nitro Data", meta = (MultiLine = "true"))
-	bool IsNitroBeingUsed;
+	UPROPERTY(BlueprintReadWrite, Category = "Nitro Data", meta = (MultiLine = "true"))
+	bool bIsNitroBeingUsed = false;
 
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Turbo Data", meta = (MultiLine = "true", UIMin = "0", ClampMin = "0", ClampMax = "1", UIMax = "1"))
-	double TempTurboPressure;
+	double TempTurboPressure = 0;
 
 	/** Please add a variable description */
-	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Transmission Data", meta = (MultiLine = "true"))
-	TArray<double> AxisDriveTorqueRatios;
+	UPROPERTY(BlueprintReadWrite, Category = "Transmission Data", meta = (MultiLine = "true"))
+	TArray<double> AxisDriveTorqueRatios = TArray<double>();
 
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Clutch Data", meta = (MultiLine = "true"))
-	double ClutchDiskAngularVelocity;
+	double ClutchDiskAngularVelocity = 0;
 
 	/** k */
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Clutch Data", meta = (MultiLine = "true"))
-	double ClutchLock;
+	double ClutchLock = 0;
 
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Clutch Data", meta = (MultiLine = "true"))
-	double ClutchTorque;
-
-	/** ω=2*Ek/I = rad/s */
-	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Engine Data", meta = (MultiLine = "true"))
-	double EngineRestOrIdleAngularVelocity;
-
-	/** kg.m^2 */
-	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Engine Data", meta = (MultiLine = "true"))
-	double EngineInertia;
-
-	/** ω=2*Ek/I = rad/s */
-	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Engine Data", meta = (MultiLine = "true"))
-	double EngineMaxAngularVelocity;
+	double ClutchTorque = 0;
 
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Gear Box Data", meta = (MultiLine = "true"))
-	double GearBoxInputTorque;
+	double GearBoxInputTorque = 0;
 
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Gear Box Data", meta = (MultiLine = "true"))
-	double GearBoxOutputTorque;
+	double GearBoxOutputTorque = 0;
 
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Gear Box Data", meta = (MultiLine = "true"))
-	int32 TargetGear;
+	int32 TargetGear = 1;
 
 	/** Total Drive Torque of Vehicle */
-	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Transmission Data", meta = (MultiLine = "true"))
-	double TransmissionTorque;
+	UPROPERTY(BlueprintReadWrite, Category = "Transmission Data", meta = (MultiLine = "true"))
+	double TransmissionTorque = 0;
 
 	/** Total Drive Torque of Vehicle */
-	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Transmission Data", meta = (MultiLine = "true"))
-	double TotalDriveAxisAngularVelocity;
+	UPROPERTY(BlueprintReadWrite, Category = "Transmission Data", meta = (MultiLine = "true"))
+	double TotalDriveAxisAngularVelocity = 0;
 
 	/** Please add a variable description */
-	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Transmission Data", meta = (MultiLine = "true"))
-	double TotalFrictionAcceleration;
+	UPROPERTY(BlueprintReadWrite, Category = "Transmission Data", meta = (MultiLine = "true"))
+	double TotalFrictionAcceleration = 0;
 
 	/** Total Drive Torque of Vehicle */
-	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Transmission Data", meta = (MultiLine = "true"))
-	double TotalDriveAxisAngularFrictionVelocity;
+	UPROPERTY(BlueprintReadWrite, Category = "Transmission Data", meta = (MultiLine = "true"))
+	double TotalDriveAxisAngularFrictionVelocity = 0;
 
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Brake Data", meta = (MultiLine = "true"))
-	TArray<double> BrakeTorqueRatios;
+	TArray<double> BrakeTorqueRatios = TArray<double>();
 
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "References", meta = (MultiLine = "true"))
-	TArray<USCAxis*> FrontAxis;
+	TArray<USCAxis*> FrontAxis = TArray<USCAxis*>();
 
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "References", meta = (MultiLine = "true"))
-	TArray<USCAxis*> RearAxis;
+	TArray<USCAxis*> RearAxis = TArray<USCAxis*>();
 
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Turbo Data")
-	double TurboSoundRatio;
+	double TurboSoundRatio = 0;
+
+	UPROPERTY(Transient)
+	bool bTurboBlowOffDoOnceGate = true;
+
+	UPROPERTY(Transient)
+	bool bKillEngineDoOnceGate = true;
+
+	UPROPERTY(Transient)
+	bool bStartEngineDoOnceGate = true;
+
+	UPROPERTY(Transient)
+	bool bStopEngineDoOnceGate = true;
 
 	/** Please add a variable description */
 	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FTriggerNitrous, bool, Enable);
@@ -466,7 +502,7 @@ public:
 	FTriggerNitrous TriggerNitrous;
 
 	/** Please add a variable description */
-	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FGearChanged);
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FGearChanged, int, CurrentGear);
 	UPROPERTY(BlueprintAssignable, BlueprintCallable, EditDefaultsOnly, Category = "Default", meta = (MultiLine = "true"))
 	FGearChanged GearChanged;
 
@@ -494,5 +530,10 @@ public:
 	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FPlayTurboLoadSound, int, TurboReleaseLevel);
 	UPROPERTY(BlueprintAssignable, BlueprintCallable, EditDefaultsOnly, Category = "Default")
 	FPlayTurboLoadSound PlayTurboLoadSound;
+
+	/** Please add a variable description */
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPlayEngineIgniteSound);
+	UPROPERTY(BlueprintAssignable, BlueprintCallable, EditDefaultsOnly, Category = "Default")
+	FPlayEngineIgniteSound PlayEngineIgniteSound;
 
 };

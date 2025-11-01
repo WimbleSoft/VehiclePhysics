@@ -30,7 +30,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Default")
 	void ConstructSuspension();
 
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Default")
+	UFUNCTION(BlueprintCallable, Category = "Default")
 	void UpdatePhysics(const double& InDeltaTime);
 
 	/** Please add a function description */
@@ -92,32 +92,32 @@ public:
 	void ResetHitValues();
 
 	/** Please add a function description */
-	UFUNCTION(BlueprintPure, Category = "Read Data | Read Ownership")
-	void GetAxis(USCAxis*& Axis);
+	UFUNCTION(BlueprintPure, Category = "Read Data | Read Ownership", meta = (ReturnDisplayName = "Axis"))
+	USCAxis* GetAxis() const;
 
 	/** Please add a function description */
-	UFUNCTION(BlueprintPure, Category = "Read Data | Read Setup Data")
-	void GetAxisSetup(FSAxis& AxisSetup);
+	UFUNCTION(BlueprintPure, Category = "Read Data | Read Setup Data", meta = (ReturnDisplayName = "AxisSetup"))
+	FSAxis GetAxisSetup() const;
 
 	/** Please add a function description */
-	UFUNCTION(BlueprintPure, Category = "Read Data |Read Setup Data")
-	void GetSuspensionSetup(FSSuspension& Suspension);
+	UFUNCTION(BlueprintPure, Category = "Read Data |Read Setup Data", meta = (ReturnDisplayName = "SuspensionSetup"))
+	FSSuspension GetSuspensionSetup() const;
 
 	/** Please add a function description */
-	UFUNCTION(BlueprintPure, Category = "Read Data |Read Setup Data")
-	void GetWheelSetup(FSWheel& Wheel);
+	UFUNCTION(BlueprintPure, Category = "Read Data |Read Setup Data", meta = (ReturnDisplayName = "WheelSetup"))
+	FSWheel GetWheelSetup() const;
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable)
 	void DrawDebugLines();
 
 	/** Vector m/s */
-	UFUNCTION(BlueprintPure, Category = "Read Data |Read Tire Data")
-	void GetWheelLinearVelocityLocal(FVector& WheelLinearVelocityLocal);
+	UFUNCTION(BlueprintPure, Category = "Read Data |Read Tire Data", meta = (ReturnDisplayName = "WheelLinearVelocityLocal"))
+	FVector GetWheelLinearVelocityLocal();
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintPure, Category = "Read Data |Read Setup Data")
-	FText GetSuspensionTag();
+	FText GetSuspensionTag() const;
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable)
@@ -132,16 +132,16 @@ public:
 	void SetWheelVisualRelativeRotation();
 
 	/** kg*m^2 */
-	UFUNCTION(BlueprintPure, Category = "Read Data |Read Setup Data")
-	void GetWheelInertia(double& WheelInertia);
+	UFUNCTION(BlueprintPure, Category = "Read Data |Read Setup Data", meta = (ReturnDisplayName = "WheelInertia"))
+	double GetWheelInertia() const;
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable)
 	void SetWheelAngularVelocity();
 
 	/** Please add a function description */
-	UFUNCTION(BlueprintPure, Category = "Read Data | Read Tire Data")
-	void GetLongSlipVelocity(double& LongSlipVelocity);
+	UFUNCTION(BlueprintPure, Category = "Read Data | Read Tire Data", meta = (ReturnDisplayName = "LongSlipVelocity"))
+	double GetLongSlipVelocity();
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable)

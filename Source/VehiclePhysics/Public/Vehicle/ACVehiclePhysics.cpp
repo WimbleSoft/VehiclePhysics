@@ -2,6 +2,10 @@
 #include "ACVehiclePhysics.h"
 #include "Vehicle.h"
 #include <Kismet/KismetMathLibrary.h>
+#include <Kismet/GameplayStatics.h>
+#include <Kismet/KismetTextLibrary.h>
+#include "TimerManager.h"
+#include "Engine/World.h"
 
 // Sets default values for this component's properties
 UACVehiclePhysics::UACVehiclePhysics()
@@ -10,21 +14,17 @@ UACVehiclePhysics::UACVehiclePhysics()
 	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = true;
 
-	ClearArrays();
-	/*if (IsAxisCountEqualToConfig()) {
-		CreateAxis();
+	//MechanicalData.AxisData = TArray<FSAxis>();
+	//MechanicalData.BrakeData = FSBrake();
+	//MechanicalData.ClutchData = FSClutch();
+	//MechanicalData.EngineData = FSEngine();
+	//MechanicalData.FuelData = FSFuel();
+	//MechanicalData.GearBoxData = FSGearBox();
+	//MechanicalData.NitroData = FSNitro();
+	//MechanicalData.TransmissionData = FSTransmission();
+	//MechanicalData.TurboData = FSTurbo();
 
-		double Temperature = 0;
-		GetWorldTemperature(Temperature);
-		MechanicalData.EngineData.CurrentTemperature = Temperature;
-
-		SplitAxisReferences();
-		InitTransmissionRatios();
-		InitBrakeRatios();
-		CreateWheelMeshes();
-	}*/
 }
-
 
 // Called when the game starts
 void UACVehiclePhysics::BeginPlay()
@@ -35,13 +35,32 @@ void UACVehiclePhysics::BeginPlay()
 	
 }
 
-
 // Called every frame
 void UACVehiclePhysics::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
 	// ...
+	TArray<USCWheel*> Suspensions = GetSuspensions();
+
+	for(USCWheel* AxisObj : Suspensions)
+	{
+		if (!AxisObj) continue;
+		AxisObj->UpdatePhysics(DeltaTime);
+	}
+
+	if (IsActive()) {
+		CalcTurbo(1.0f);
+		CalcNitrous(1.0f);
+		CalcFuelConsumption(1.0f);
+		SetLoad();
+		double EngineTorqueL = CalcEngine();
+		double ClutchTorqueL = CalcClutch(EngineTorqueL);
+		CalcTransmissionTorque(ClutchTorqueL);
+		CalcBrakeTorque();
+		SetWheelFeedback();
+		PrintDebug();
+	}
 }
 
 void UACVehiclePhysics::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -56,18 +75,29 @@ namespace
 	static constexpr double RPM_TO_RAD_PER_SEC = PI / 30.0;          // ω = RPM * 2π / 60 = π / 30
 }
 
-void UACVehiclePhysics::GetAxisSockets(TArray<FName>& AxisSockets)
+void UACVehiclePhysics::ConstructVehiclePhysics()
 {
-	TArray<FName> AxisSocketsL;
-	AVehicle* Vehicle = nullptr;
-	
-	GetVehicle(Vehicle);
-	AxisSockets = AxisSocketsL;
+	ClearArrays();
+	if (IsAxisCountEqualToConfig()) {
+		CreateAxis();
+		MechanicalData.EngineData.CurrentTemperature = GetWorldTemperature();
+
+		SplitAxisReferences();
+		InitTransmissionRatios();
+		InitBrakeRatios();
+		CreateWheelMeshes();
+	}
+}
+
+TArray<FName> UACVehiclePhysics::GetAxisSockets()
+{
+	TArray<FName> AxisSocketsL = TArray<FName>();
+	AVehicle* Vehicle = GetVehicle();
 
 	USkeletalMeshComponent* BodyMesh = Vehicle->VehicleBody;
 	if (!IsValid(BodyMesh))
 	{
-		AxisSockets = AxisSocketsL;
+		return AxisSocketsL;
 	}
 
 	// Get all socket names on the body
@@ -82,20 +112,219 @@ void UACVehiclePhysics::GetAxisSockets(TArray<FName>& AxisSockets)
 		}
 	}
 
-	AxisSockets = AxisSocketsL;
+	return AxisSocketsL;
 }
 
-void UACVehiclePhysics::GetVehicle(AVehicle*& VehicleActor)
+AVehicle* UACVehiclePhysics::GetVehicle() const
 {
-	VehicleActor = Cast<AVehicle>(GetOwner());
+	return Cast<AVehicle>(GetOwner());
 }
 
 void UACVehiclePhysics::SetSteeringInput(double Steering)
 {
+	// ------------------------------------------------------------
+	// Smooth / raw steering selection (SelectFloat + FInterpTo)
+	// ------------------------------------------------------------
+	float Dt = GetWorld() ? GetWorld()->GetDeltaSeconds() : 0.f;
+	float Smoothed = FMath::FInterpTo(SteeringValue, Steering, Dt, 7.5f);
+	SteeringValue = SmoothSteering ? (double)Smoothed : Steering;
+
+	// ------------------------------------------------------------
+	// ForEach Axis in AxisArray
+	// ------------------------------------------------------------
+	for (USCAxis* AxisObj : AxisArray)
+	{
+		if (!AxisObj) continue;
+
+		const FSAxis& Axis = AxisObj->AxisSetup;       // Break SAxis
+		if (!Axis.IsSteerAxis)                         // Branch(IsSteerAxis)
+		{
+			continue;
+		}
+
+		// --------------------------------------------------------
+		// Build rotation target: SteeringValue * MaxRotationAngle
+		// Clamp to [-MaxRotationAngle, +MaxRotationAngle]
+		// (Multiply_DoubleDouble + FClamp with -MaxRot and +MaxRot)
+		// --------------------------------------------------------
+		const float MaxRot = Axis.MaxRotationAngle;
+		double RotationAngle = FMath::Clamp(SteeringValue * MaxRot, -MaxRot, MaxRot);
+
+		FName AxisName = Axis.AxisName;
+		float AxisWidth = Axis.AxisWidth;
+
+		// --------------------------------------------------------
+		// ForEach Suspension (SCWheel) on this axis
+		// --------------------------------------------------------
+		for (USCWheel* Wheel : AxisObj->Suspensions)
+		{
+			if (!Wheel) continue;
+
+			const FSAxis WheelAxisSetup = Wheel->GetAxisSetup();
+			const FName WheelAxisName = WheelAxisSetup.AxisName; // GetAxisSetup → Break SAxis.AxisName
+			if (WheelAxisName != AxisName)// EqualEqual_NameName
+				continue;
+
+			if (AckermannAccuracy)
+			{
+				SetSteeringValueByAckermannAccuracy(Wheel, AxisName, RotationAngle, AxisWidth);
+			}
+			else
+			{
+				Wheel->SteeringAngle = GetSteeringAngle(RotationAngle, Wheel);
+			}
+		}
+	}
 }
 
 void UACVehiclePhysics::SetThrottleInput(double Throttle)
 {
+	// --- Break SMechanicalData / Break SEngine ---
+	bool bEngineStarted = MechanicalData.EngineData.IsEngineStarted;
+
+	// --- If engine not started → Start Engine ---
+	if (!bEngineStarted)
+	{
+		if (Throttle > 0)
+			StartEngine();
+	}
+
+	// --- Speed in km/h (Get Forward Speed * 0.036) + ABS node ---
+	double ThrottleOnGearchange = Throttle * static_cast<double>(!GearChange);
+
+	if (MechanicalData.GearBoxData.GearBoxType == EGearBoxType::FullAuto)
+	{
+		bool bReverse = (GetCurrentGear() < 0);
+		if (bReverse)
+		{
+			float SpeedCmS = GetForwardSpeed();               // your function returning cm/s
+			float SpeedKmh = SpeedCmS * 0.036f;   // ABS + * 0.036
+			if (SpeedKmh > 1)
+			{
+				SetBrakeInput(ThrottleOnGearchange);
+			}
+			else
+			{
+				if (GetCurrentGear() != 1 and ThrottleOnGearchange > 0) {
+					SetGear(1);
+				}
+				else {
+					if (GearChange) {
+						ThrottleValue = SmoothThrottle ?
+							FMath::FInterpTo(ThrottleValue, ThrottleOnGearchange, GetWorld() ? GetWorld()->GetDeltaSeconds() : 0.f, 10.f)
+							:
+							ThrottleOnGearchange;
+					}
+				}
+			}
+		}
+		else
+		{
+			float SpeedCmS = GetForwardSpeed();               // your function returning cm/s
+			float SpeedKmh = FMath::Abs(SpeedCmS * 0.036f);   // ABS + * 0.036
+			if (SpeedKmh < 0.001) {
+				if (GetCurrentGear() != 1 and ThrottleOnGearchange > 0) {
+					SetGear(1);
+				}
+				else {
+					if (GearChange) {
+						ThrottleValue = SmoothThrottle ?
+							FMath::FInterpTo(ThrottleValue, ThrottleOnGearchange, GetWorld() ? GetWorld()->GetDeltaSeconds() : 0.f, 10.f)
+							:
+							ThrottleOnGearchange;
+					}
+				}
+			}
+			else {
+				if (GearChange) {
+					ThrottleValue = SmoothThrottle ?
+						FMath::FInterpTo(ThrottleValue, ThrottleOnGearchange, GetWorld() ? GetWorld()->GetDeltaSeconds() : 0.f, 10.f)
+						:
+						ThrottleOnGearchange;
+				}
+			}
+		}
+	}
+	else
+	{
+		if (GearChange)
+		{
+			ThrottleValue = 0;
+		}
+		else
+		{
+			ThrottleValue = SmoothThrottle ? 
+			FMath::FInterpTo(ThrottleValue, ThrottleOnGearchange, GetWorld() ? GetWorld()->GetDeltaSeconds() : 0.f, 50.f)
+			:
+			ThrottleOnGearchange;
+		}
+	}
+
+}
+
+void UACVehiclePhysics::StartEngine()
+{
+	if (bStartEngineDoOnceGate) {
+		bStartEngineDoOnceGate = false;
+
+		//Block ignition if no juice. But play ignition sound.
+		CanIgnite = MechanicalData.FuelData.FuelLeft > 0;
+		if (CanIgnite) {
+			if (MechanicalData.EngineData.EngineHealth > 0) {
+				if (!MechanicalData.EngineData.IsEngineStarted) {
+					EngineStarted.Broadcast();
+					//TODO: Delay as much as ignition sound length (Maybe)
+					MechanicalData.EngineData.IsEngineStarted = true;
+					bStopEngineDoOnceGate = true;
+				}
+			}
+			else {
+				//Can't start car if engine health is not more than 0. But play ignition sound. And set CanIgnite true for next attempt.
+				PlayEngineIgniteSound.Broadcast();
+				CanIgnite = true;
+				bStartEngineDoOnceGate = true;
+			}
+		}
+		else {
+			//Can't start car if engine fuel left is not more than 0. But play ignition sound. And set CanIgnite true for next attempt.
+			PlayEngineIgniteSound.Broadcast();
+			CanIgnite = true;
+			bStartEngineDoOnceGate = true;
+		}
+	}
+}
+
+void UACVehiclePhysics::StopEngine()
+{
+	if (bStopEngineDoOnceGate) {
+		bStopEngineDoOnceGate = false;
+		if (MechanicalData.EngineData.IsEngineStarted) {
+			MechanicalData.EngineData.IsEngineStarted = false;
+			ThrottleValue = 0.0;
+			BrakeValue = 0.0;
+			SetNitrous(false);
+			EngineStopped.Broadcast();
+			CanIgnite = true;
+			bStartEngineDoOnceGate = true;
+		}
+	}
+}
+
+void UACVehiclePhysics::FixEngine()
+{
+	bKillEngineDoOnceGate = true;
+	MechanicalData.EngineData.CurrentTemperature = MechanicalData.EngineData.AvgTemp;
+	MechanicalData.EngineData.EngineHealth = 100.0;
+}
+
+void UACVehiclePhysics::KillEngine()
+{
+	if (bKillEngineDoOnceGate) {
+		bKillEngineDoOnceGate = false;
+		//Engine is dead.
+		EngineExploded.Broadcast();
+		StopEngine();
+	}
 }
 
 void UACVehiclePhysics::SetBrakeInput(double Brake)
@@ -105,8 +334,7 @@ void UACVehiclePhysics::SetBrakeInput(double Brake)
 	const bool speedGT1Kmh = (speedKmh > 1.0);               // > 1.0 check
 	const bool speedLT_0p001 = (speedKmh < 0.001);             // < 0.001 check (near-still)
 
-	int32 gear = 0;                     // used by >1 and != -1 checks
-	GetCurrentGear(gear);
+	int32 gear = GetCurrentGear();
 	const bool autoBox = (MechanicalData.GearBoxData.GearBoxType == EGearBoxType::FullAuto);
 
 	auto smoothPick = [&](double current, double target)->double
@@ -188,39 +416,9 @@ void UACVehiclePhysics::SetClutchInput(double Clutch)
 	ClutchValue = FMath::Clamp(Target, 0.0, 1.0);
 }
 
-void UACVehiclePhysics::GetSuspensions(TArray<USCWheel*>& OutSuspensions)
-{
-	int32 ReserveCount = 0;
-	for (const USCAxis* Axis : AxisArray)
-	{
-		if (IsValid(Axis))
-		{
-			ReserveCount += Axis->Suspensions.Num();
-		}
-	}
-	OutSuspensions.Reserve(ReserveCount);
-
-	// Outer loop over axes
-	for (const USCAxis* Axis : AxisArray)
-	{
-		if (!IsValid(Axis)) continue;
-
-		// Inner loop over that axis' SuspensionsX
-		for (USCWheel* S : Axis->Suspensions)
-		{
-			if (IsValid(S))
-			{
-				OutSuspensions.Add(S);
-			}
-		}
-	}
-
-}
-
 void UACVehiclePhysics::CreateAxis()
 {
-	AVehicle* Vehicle = nullptr;
-	GetVehicle(Vehicle);
+	AVehicle* Vehicle = GetVehicle();
 	if (!IsValid(Vehicle))
 		return;
 
@@ -247,18 +445,188 @@ void UACVehiclePhysics::SetHandbrake(bool bNewHandbrake)
 
 void UACVehiclePhysics::SetLoad()
 {
-}
+	Load = UKismetMathLibrary::FInterpTo(Load, ThrottleValue > 0 ? 1 : 0, GetWorld() ? GetWorld()->GetDeltaSeconds() : 0.f, 2.5f);
+	#if !(UE_BUILD_SHIPPING)
+	
+	const FText LoadText = FText::Format(
+	NSLOCTEXT("ACVehiclePhysics", "PrintDebug_Load", "Load = {0}"), Load);
 
-void UACVehiclePhysics::CalcEngine(double& EngineTorqueP, double RestOrIdleKineticEnergyP, double MaxKineticEnergyP, double LocalEngineTorqueP)
-{
+	UKismetSystemLibrary::PrintText(
+		this, LoadText,
+		/*bPrintToScreen*/ true,
+		/*bPrintToLog*/   false,
+		/*TextColor*/     FLinearColor(1.f, 0.08304f, 0.f, 1.f), // (R=1,G=0.08304,B=0,A=1)
+		/*Duration*/      0.f,
+		/*Key*/           NAME_None
+	);
+	#endif
 }
 
 void UACVehiclePhysics::CalcTurbo(double TurboMultiplier)
 {
+	if (MechanicalData.EngineData.IsEngineStarted) {
+		if (ThrottleValue <= 0) {
+			//Off Load
+			if (CanTurboDecrease) {
+				//DECREASE TO NEGATIVE CAPACITY
+				if (CanTurboDecrease)
+				{
+					// Pull references from your mechanical data
+
+					const double Capacity = static_cast<double>(MechanicalData.TurboData.TurboPressureCapacity); // float -> double
+					const double DeltaSeconds = UGameplayStatics::GetWorldDeltaSeconds(this);
+					const double Decrease = DeltaSeconds * Capacity * 5.0;
+
+					// TurboPressure (float) math in double, then clamp and write back
+					const double Current = static_cast<double>(MechanicalData.TurboData.TurboPressure);
+					const double NewPressureD = FMath::Clamp(Current - Decrease, -Capacity, +Capacity);
+					MechanicalData.TurboData.TurboPressure = static_cast<float>(NewPressureD);
+
+					// If we've reached the negative capacity, stop further decreasing
+					if (NewPressureD <= -Capacity)
+					{
+						CanTurboDecrease = false;
+					}
+
+					// Mirror the Blueprint call
+					SetTurboLoadRatioAndTriggerSound(TurboMultiplier);
+				}
+				else
+				{
+					SetTurboLoadRatioAndTriggerSound(TurboMultiplier);
+				}
+			}
+			else {
+				//If Turbo Pressure reached negative pressure capacity, now increase to 0.
+				MechanicalData.TurboData.TurboPressure =
+					FMath::Clamp(
+						(GetWorld() ? GetWorld()->GetDeltaSeconds() : 0.f) * 
+						2.5f * 
+						MechanicalData.TurboData.TurboPressureCapacity +
+				MechanicalData.TurboData.TurboPressure, 
+				MechanicalData.TurboData.TurboPressure * -1, 0);
+
+				if (MechanicalData.TurboData.TurboPressure) {
+					CanTurboDecrease = false;
+				}
+
+				SetTurboLoadRatioAndTriggerSound(TurboMultiplier);
+			}
+		}
+		else {
+			//On Load
+			double turboTarget = MechanicalData.TurboData.TurboPressure +
+				(GetWorld() ? GetWorld()->GetDeltaSeconds() : 0.f) *
+				ThrottleValue *
+				(MechanicalData.TurboData.TurboPressure < 0 ? 5 : 1) *
+				MechanicalData.TurboData.TurboPressureCapacity;
+			TempTurboPressure = FMath::Clamp(turboTarget, MechanicalData.TurboData.TurboPressureCapacity * -1, MechanicalData.TurboData.TurboPressureCapacity);
+
+			MechanicalData.TurboData.TurboPressure = TempTurboPressure;
+			CanTurboDecrease = true;
+
+			SetTurboLoadRatioAndTriggerSound(TurboMultiplier);
+		}
+	}
 }
 
-void UACVehiclePhysics::CalcFuelConsumption(double ConsumptionMultiplier)
+void UACVehiclePhysics::CalcFuelConsumption(double ConsumptionMultiplier /*= 1.0*/)
 {
+	// === Inputs/state used by the Blueprint ===
+	// MechanicalData (contains EngineData + FuelData)
+	// CurrentFuelEnergy (Joules consumed by powertrain this frame/tick)
+	// Outputs/side effects:
+	//   CanIgnite (bool)
+	//   FuelConsumption (double)  // units: cm^3 consumed this tick
+	//   MechanicalData.FuelData.FuelLeft is decreased
+
+	// CanIgnite = (FuelLeft > 0)
+	CanIgnite = (MechanicalData.FuelData.FuelLeft > 0.0);
+
+	if (!MechanicalData.EngineData.IsEngineStarted)
+	{
+		FuelConsumption = 0.0;
+		return;
+	}
+
+	// --- Curve factor based on RPM ---
+	const double rpm = MechanicalData.EngineData.CurrentRPM;
+	const double maxRPM = FMath::Max(1.0, MechanicalData.EngineData.MaxRPM); // avoid div-by-zero
+	const float x = static_cast<float>(rpm / maxRPM);                  // RPM normalized
+	const float curveVal = (MechanicalData.FuelData.FuelConsumptionCurve)
+		? MechanicalData.FuelData.FuelConsumptionCurve->GetFloatValue(x)
+		: 1.0f;
+
+	// --- Fuel energy density (Wh/L) select by fuel type ---
+	auto EnergyDensity_WhPerL = [&]() -> double
+		{
+			switch (MechanicalData.FuelData.FuelType)
+			{
+			case EFuelType::Electricity: return  500.0;
+			case EFuelType::Gasoline:    return 9500.0;
+			case EFuelType::Diesel:      return 11000.0;
+			case EFuelType::LPG:         return 7000.0;
+			default:                     return 0.0;
+			}
+		}();
+
+	// Convert Wh/L -> J/L (×3600). The BP also multiplies by 5.0 (kept as-is).
+	double energy_J_per_L = EnergyDensity_WhPerL * 3600.0 * 5.0;
+
+	// Convert J/L -> J/cm^3 (÷1000)
+	double energy_J_per_cm3 = energy_J_per_L / 1000.0;
+
+	// cm^3 consumed from the fuel this tick, based on drivetrain energy draw:
+	//   Volume(cm^3) = Energy(J) / (J/cm^3)
+	double volumeCm3FromEnergy = (energy_J_per_cm3 > 0.0)
+		? (CurrentFuelEnergy / energy_J_per_cm3)
+		: 0.0;
+
+	// Engine-type factor (matches the Select node values)
+	auto EngineFactor = [&]() -> double
+		{
+			switch (MechanicalData.EngineData.EngineType)
+			{
+			case EEngineType::I2:  return  1.8;
+			case EEngineType::V2:  return  2.0;
+			case EEngineType::I3:  return  3.0;
+			case EEngineType::I4:  return  3.8;
+			case EEngineType::V4:  return  4.0;
+			case EEngineType::I5:  return  4.8;
+			case EEngineType::I6:  return  5.8;
+			case EEngineType::V6:  return  6.0;
+			case EEngineType::V8:  return  8.0;
+			case EEngineType::V10: return 10.0;
+			case EEngineType::V12: return 12.0;
+			default:               return  1.0;
+			}
+		}();
+
+	const double engineVolumeL = MechanicalData.EngineData.EngineVolume; // L
+	const double dt = (GetWorld()) ? GetWorld()->GetDeltaSeconds() : 0.0;
+
+	// FuelConsumption (cm^3) = Multiplier * (cm^3 from energy) * EngineVolume(L) * dt * EngineFactor * Curve(RPM)
+	FuelConsumption = ConsumptionMultiplier
+		* volumeCm3FromEnergy
+		* engineVolumeL
+		* dt
+		* EngineFactor
+		* static_cast<double>(curveVal);
+
+	// Update FuelLeft (Liters): (L*1000 - FuelConsumption(cm^3)) / 1000
+	const double prevFuelL = MechanicalData.FuelData.FuelLeft;
+	double       newFuelL = (prevFuelL * 1000.0 - FuelConsumption) / 1000.0;
+
+	// Blueprint checks (newFuelL <= 0) and branches; we clamp and reflect the state.
+	if (newFuelL <= 0.0)
+	{
+		newFuelL = 0.0;
+		CanIgnite = false;              // out of fuel ⇒ cannot ignite
+		// (The BP's Then branch calls another function; if you have an EngineStop(), call it here.)
+		// EngineStop(); // ← optional if your class has it
+	}
+
+	MechanicalData.FuelData.FuelLeft = newFuelL;
 }
 
 void UACVehiclePhysics::TriggerBackfires()
@@ -272,23 +640,6 @@ void UACVehiclePhysics::TriggerBackfires()
 			TriggerBackfire.Broadcast();
 		}
 	}
-}
-
-double UACVehiclePhysics::GetForwardSpeed()
-{
-	AVehicle* Vehicle = nullptr;
-	GetVehicle(Vehicle);
-	if (!IsValid(Vehicle))
-	{
-		return Vehicle->GetVelocity().Size();
-	}
-
-	return 0.0;
-}
-
-void UACVehiclePhysics::GetCurrentGear(int32& CurrentGearP) const
-{
-	CurrentGearP = CurrentGear;
 }
 
 void UACVehiclePhysics::SetGearUp()
@@ -316,46 +667,55 @@ void UACVehiclePhysics::SetGearDown()
 	}
 }
 
+void UACVehiclePhysics::SetGear(int32 InCurrentGear)
+{
+	// 1) Drop load & mark as changing
+	Load = 0.0;                 // K2Node_VariableSet_15 (Load = 0.0)
+	GearChange = true;          // K2Node_VariableSet_2  (GearChange = true)
+
+	// 2) Compute per-half delay: GearChangeLatency / 2
+	const double Latency = static_cast<double>(MechanicalData.GearBoxData.GearChangeLatency);
+	const double HalfLatency = FMath::Max(0.0, Latency / 2.0);
+
+	// Timers replicate the two Delay nodes
+	// t = HalfLatency: set TargetGear and go Neutral (BP sets CurrentGear = 1)
+	FTimerHandle TempHandle1_;
+	GetWorld()->GetTimerManager().SetTimer(
+		/*OutHandle*/ TempHandle1_,
+		FTimerDelegate::CreateWeakLambda(this, [this, InCurrentGear]()
+			{
+				TargetGear = InCurrentGear;   // K2Node_VariableSet_12(TargetGear = InCurrentGear)
+				CurrentGear = 1;              // K2Node_VariableSet_0  ("Switch to N" in comment; value = 1)
+			}),
+		HalfLatency, /*bLoop*/ false
+	);
+	FTimerHandle TempHandle2_;
+	// t = 2*HalfLatency: commit gear, fire event, clear flag
+	GetWorld()->GetTimerManager().SetTimer(
+		/*OutHandle*/ TempHandle2_,
+		FTimerDelegate::CreateWeakLambda(this, [this]()
+			{
+				CurrentGear = TargetGear;     // K2Node_VariableSet_10 (CurrentGear = TargetGear)
+				GearChanged.Broadcast(CurrentGear); // K2Node_CallDelegate_7
+				GearChange = false;           // K2Node_VariableSet_1 (false)
+			}),
+		HalfLatency * 2.0, /*bLoop*/ false
+	);
+}
+
 void UACVehiclePhysics::SetUseAutoGearBox(bool bIsUsingAutoGearBox)
 {
 	UseAutoGearBox = bIsUsingAutoGearBox;
 }
 
-void UACVehiclePhysics::GetSteeringValue(double& OutSteeringValue) const
-{
-	OutSteeringValue = SteeringValue;
-}
-
-void UACVehiclePhysics::RpmToRadS(double Rpm, double& RadS)
-{
-	RadS = Rpm * RPM_TO_RAD_PER_SEC;
-}
-
-void UACVehiclePhysics::RadSToRpm(double RadS, double& Rpm)
-{
-	Rpm = RadS / RPM_TO_RAD_PER_SEC;
-}
-
-void UACVehiclePhysics::HpToWatt(double Hp, double& Watt)
-{
-	Watt = Hp * 745.7;
-}
-
-void UACVehiclePhysics::GetThrottleValue(double& ThrottleValueP)
-{
-	ThrottleValueP = ThrottleValue;
-}
-
 void UACVehiclePhysics::CreateWheelMeshes()
 {
-	AVehicle* Vehicle = nullptr;
-	GetVehicle(Vehicle);
+	AVehicle* Vehicle = GetVehicle();
 
 	if (!IsValid(Vehicle))
 		return;
 
-	TArray<USCWheel*> SuspensionArray;
-	GetSuspensions(SuspensionArray);
+	TArray<USCWheel*> SuspensionArray = GetSuspensions();
 
 	// For each suspension, create the wheel mesh and add result to WheelMeshArray
 	for (USCWheel* Suspension : SuspensionArray)
@@ -363,8 +723,7 @@ void UACVehiclePhysics::CreateWheelMeshes()
 		if (!IsValid(Suspension))
 			continue;
 
-		USkeletalMeshComponent* WheelMesh = nullptr;
-		Vehicle->CreateWheelMesh(Suspension, WheelMesh);
+		USkeletalMeshComponent* WheelMesh = Vehicle->CreateWheelMesh(Suspension);
 
 		WheelMeshArray.Add(WheelMesh);
 	}
@@ -393,44 +752,62 @@ void UACVehiclePhysics::ClearArrays()
 	AxisArray.Empty();
 }
 
-void UACVehiclePhysics::KelvinToCelsius(double Kelvin, double& Celcius)
+void UACVehiclePhysics::ReFuel(double LitersPerSecond /*= 1.0*/)
 {
-	Celcius = Kelvin - 273.15;
-}
+	// If engine is running, warn and bail
+	if (MechanicalData.EngineData.IsEngineStarted)
+	{
+		UKismetSystemLibrary::PrintString(
+			this,
+			TEXT("Stop engine first."),
+			/*bPrintToScreen=*/true,
+			/*bPrintToLog=*/true,
+			FLinearColor::Red,
+			/*Duration=*/0.0f
+		);
+		return;
+	}
 
-void UACVehiclePhysics::CalorieToJoule(double Calorie, double& Joule)
-{
-	Joule = Calorie * 4.184;
-}
+	const double DeltaSeconds = UGameplayStatics::GetWorldDeltaSeconds(GetWorld());
 
-void UACVehiclePhysics::CelsiusToKelvin(double Celsius, double& Kelvin)
-{
-	Kelvin = Celsius + 273.15;
-}
+	// === Math mirrors the Blueprint ===
+	// Graph does: (LPS * 1000) * DeltaSeconds * 5  -> add to (FuelLeft * 1000)
+	// then divide by 1000 and clamp to capacity.
+	// Simplified: add liters directly: LPS * Delta * 5, clamp to capacity.
 
-void UACVehiclePhysics::GetCurrentPower(double& Power) const
-{
-	double Rpm = 0;
-	GetEngineRpm(Rpm);
-	//Convert to KW
-	Power = Rpm * EngineTorque / 9.5488 / 1000;
-}
+	FSFuel& Fuel = MechanicalData.FuelData;
 
-void UACVehiclePhysics::GetEngineRpm(double& Rpm) const
-{
-	Rpm = MechanicalData.EngineData.CurrentRPM;
-}
+	const double LitersToAdd = LitersPerSecond * DeltaSeconds * 5.0;  // 5x scale from the graph
+	Fuel.FuelLeft = FMath::Clamp(Fuel.FuelLeft + LitersToAdd, 0.0, Fuel.FuelCapacity);
 
-void UACVehiclePhysics::ReFuel(double LitersPerSecond)
-{
+	// CanIgnite := FuelLeft > 0
+	CanIgnite = (Fuel.FuelLeft > 0.0);
+
+	// Debug print (Blueprint prints in cm^3)
+	const double ImportCm3PerSec = LitersPerSecond * 1000.0;
+	const double FuelLeftCm3 = Fuel.FuelLeft * 1000.0;
+
+	const FText Msg = FText::Format(
+		NSLOCTEXT("ACVehiclePhysicsX", "ReFuelXDebug",
+			"Fuel Import = {0} cm^3/s\nCurrent Fuel Left = {1} cm^3"),
+		FText::AsNumber(ImportCm3PerSec),
+		FText::AsNumber(FuelLeftCm3)
+	);
+
+	UKismetSystemLibrary::PrintText(
+		this,
+		Msg,
+		/*bPrintToScreen=*/true,
+		/*bPrintToLog=*/false,
+		FLinearColor(0.0f, 0.66f, 1.0f, 1.0f),
+		/*Duration=*/0.0f
+	);
 }
 
 void UACVehiclePhysics::CalcNitrous(double NitrousPowerMultiplier)
 {
 	// 1) Sample curve at current RPM
-	double Rpm = 0;
-	GetEngineRpm(Rpm);
-
+	double Rpm = GetEngineRpm();
 
 	float CurvePct = 0.f; // percent from curve (e.g., 0..50)
 	if (MechanicalData.NitroData.NitroCurve)
@@ -438,15 +815,15 @@ void UACVehiclePhysics::CalcNitrous(double NitrousPowerMultiplier)
 		CurvePct = MechanicalData.NitroData.NitroCurve->GetFloatValue(Rpm);
 	}
 
-	const bool bCanBoost = IsNitroBeingUsed && (MechanicalData.NitroData.NitroLeft > 0.f);
+	const bool CanBoost = bIsNitroBeingUsed && (MechanicalData.NitroData.NitroLeft > 0.f);
 
 	// 2) Compute Boost multiplier (1 + multiplier * percent/100), or 1 when off
-	const float Boost = bCanBoost ? 1.f + NitrousPowerMultiplier * (CurvePct * 0.01f) : 1.f;
+	const float Boost = CanBoost ? 1.f + NitrousPowerMultiplier * (CurvePct * 0.01f) : 1.f;
 
 	NitroBoostMultiplier = Boost;
 
 	// 3) Consume nitro while Boosting
-	if (bCanBoost)
+	if (CanBoost)
 	{
 		const float Rate = 1; //NitroConsumptionRate; L/s
 		MechanicalData.NitroData.NitroLeft = FMath::Clamp(
@@ -458,14 +835,9 @@ void UACVehiclePhysics::CalcNitrous(double NitrousPowerMultiplier)
 		// Optional: auto-stop when empty
 		if (MechanicalData.NitroData.NitroLeft <= KINDA_SMALL_NUMBER)
 		{
-			IsNitroBeingUsed = false;
+			bIsNitroBeingUsed = false;
 		}
 	}
-}
-
-void UACVehiclePhysics::GetTotalGearRatio(double& GearRatio)
-{
-	GearRatio = MechanicalData.GearBoxData.Efficiency * MechanicalData.GearBoxData.FinalDriveRatio * MechanicalData.GearBoxData.GearRatios[CurrentGear].GearRatio;
 }
 
 void UACVehiclePhysics::SetNitrous(bool bNewNitrous)
@@ -474,17 +846,17 @@ void UACVehiclePhysics::SetNitrous(bool bNewNitrous)
 		if (bNewNitrous) {
 			// Activate nitro only if CurrentRPM is above 15% of MaxRPM and throttle is pressed
 			if (MechanicalData.EngineData.CurrentRPM > MechanicalData.EngineData.MaxRPM * 0.15 && ThrottleValue > 0) {
-				IsNitroBeingUsed = true;
+				bIsNitroBeingUsed = true;
 				TriggerNitrous.Broadcast(true);
 			}
 		}
 		else {
-			IsNitroBeingUsed = false;
+			bIsNitroBeingUsed = false;
 			TriggerNitrous.Broadcast(false);
 		}
 	}
 	else {
-		IsNitroBeingUsed = false;
+		bIsNitroBeingUsed = false;
 		TriggerNitrous.Broadcast(false);
 	}
 }
@@ -585,17 +957,164 @@ void UACVehiclePhysics::InitTransmissionRatios()
 
 void UACVehiclePhysics::PrintDebug()
 {
-}
+#if !(UE_BUILD_SHIPPING)
 
-void UACVehiclePhysics::CmsToKmh(double Cms, double& Kmh)
-{
-	Kmh = Cms * 0.036;
+	// ---------- Block 1 General Data----------
+	// Current gear name (safe index)
+	FName GearName = NAME_None;
+	if (MechanicalData.GearBoxData.GearRatios.IsValidIndex(CurrentGear))
+	{
+		GearName = MechanicalData.GearBoxData.GearRatios[CurrentGear].GearName;
+	}
+
+	double WT = GetWorldTemperature();
+
+	double VT = MechanicalData.EngineData.CurrentTemperature;
+	double EH = MechanicalData.EngineData.EngineHealth;
+	double Kmh = CmsToKmh(GetOwner() ? GetOwner()->GetVelocity().Size() : 0.0);
+
+	FNumberFormattingOptions TwoDec;
+	TwoDec.MinimumFractionalDigits = 2;
+	TwoDec.MaximumFractionalDigits = 2;
+
+	FNumberFormattingOptions SpeedFmt;
+	SpeedFmt.MinimumIntegralDigits = 3;
+	SpeedFmt.MinimumFractionalDigits = 0;
+	SpeedFmt.MaximumFractionalDigits = 0;
+
+	FFormatNamedArguments A1;
+	A1.Add(TEXT("CG"), FText::FromName(GearName));
+	A1.Add(TEXT("WT"), FText::AsNumber(WT, &TwoDec));
+	A1.Add(TEXT("VT"), FText::AsNumber(VT, &TwoDec));
+	A1.Add(TEXT("EH"), FText::AsNumber(EH, &TwoDec));
+	A1.Add(TEXT("VS"), FText::AsNumber(Kmh, &SpeedFmt));
+
+	const FText T1 = FText::Format(
+		NSLOCTEXT("VehiclePhysics", "PrintDebug_1",
+			"Current Gear = {CG}\n"
+			"World Temperature = {WT} C\n"
+			"Vehicle Temperature = {VT} C\n"
+			"Engine Health = {EH} %\n"
+			"Vehicle Speed = {VS} Km/h"),
+		A1);
+
+	UKismetSystemLibrary::PrintText(
+		this, T1,
+		/*bPrintToScreen*/ true,
+		/*bPrintToLog*/   false,
+		/*TextColor*/     FLinearColor(1.f, 0.f, 0.965831f, 1.f),
+		/*Duration*/      0.f,
+		/*Key*/           NAME_None
+	);
+
+	// ---------- Block 2 ----------
+	double CT = ClutchTorque;
+	double CL = ClutchLock;
+	double CRPM = RadSToRpm(ClutchDiskAngularVelocity);
+	double TTT = TransmissionTorque;
+
+	FNumberFormattingOptions ZeroDec3Int; // CT
+	ZeroDec3Int.MinimumIntegralDigits = 3;
+	ZeroDec3Int.MinimumFractionalDigits = 0;
+	ZeroDec3Int.MaximumFractionalDigits = 0;
+
+	FNumberFormattingOptions TwoDecAgain; // CL
+	TwoDecAgain.MinimumFractionalDigits = 2;
+	TwoDecAgain.MaximumFractionalDigits = 2;
+
+	FNumberFormattingOptions RpmFmt; // CRPM
+	RpmFmt.MinimumIntegralDigits = 3;
+	RpmFmt.MinimumFractionalDigits = 0;
+	RpmFmt.MaximumFractionalDigits = 2;
+
+	FNumberFormattingOptions TwoDec3Int; // TTT
+	TwoDec3Int.MinimumIntegralDigits = 3;
+	TwoDec3Int.MinimumFractionalDigits = 2;
+	TwoDec3Int.MaximumFractionalDigits = 2;
+
+	FFormatNamedArguments A2;
+	A2.Add(TEXT("CT"), FText::AsNumber(CT, &ZeroDec3Int));
+	A2.Add(TEXT("CL"), FText::AsNumber(CL, &TwoDecAgain));
+	A2.Add(TEXT("CRPM"), FText::AsNumber(CRPM, &RpmFmt));
+	A2.Add(TEXT("TTT"), FText::AsNumber(TTT, &TwoDec3Int));
+
+	const FText T2 = FText::Format(
+		NSLOCTEXT("VehiclePhysics", "PrintDebug_2",
+			"Clutch Torque = {CT} Nm\n"
+			"Clutch Lock = {CL} k\n"
+			"Clutch RPM = {CRPM} RPM\n"
+			"Total Transmission Drive Torque = {TTT} Nm"),
+		A2);
+
+	UKismetSystemLibrary::PrintText(
+		this, T2,
+		/*bPrintToScreen*/ true,
+		/*bPrintToLog*/   false,
+		/*TextColor*/     FLinearColor(0.f, 1.f, 0.636643f, 1.f),
+		/*Duration*/      0.f,
+		/*Key*/           NAME_None
+	);
+
+	// ---------- Block 3: Engine stats (K2Node_FormatText_5 -> PrintText_61) ----------
+	const FText EP = UKismetTextLibrary::Conv_DoubleToText(GetCurrentPower(), ERoundingMode::HalfToEven, /*AlwaysSign*/false, /*Grouping*/true,  /*MinInt*/1,   /*MaxInt*/324, /*MinFrac*/2, /*MaxFrac*/2);
+	const FText ET = UKismetTextLibrary::Conv_DoubleToText(EngineTorque, ERoundingMode::HalfToEven, false, true, 3, 324, 0, 0);
+	const FText FI = UKismetTextLibrary::Conv_DoubleToText(GetEngineInertia(), ERoundingMode::HalfToEven, false, true, 1, 324, 2, 3);
+	const FText EAA = UKismetTextLibrary::Conv_DoubleToText(GetEngineAngularAcceleration(), ERoundingMode::HalfToEven, false, true, 3, 324, 0, 0);
+	const FText EAD = UKismetTextLibrary::Conv_DoubleToText(GetEngineAngularDeceleration(), ERoundingMode::HalfToEven, false, true, 3, 324, 0, 0);
+	const FText EAV = UKismetTextLibrary::Conv_DoubleToText(EngineAngularVelocity, ERoundingMode::HalfToEven, false, true, 3, 324, 0, 0);
+	const FText ERPM = UKismetTextLibrary::Conv_DoubleToText(GetEngineRpm(), ERoundingMode::HalfToEven, false, true, 3, 324, 1, 1);
+
+	const FText EngineText = FText::Format(
+		NSLOCTEXT("ACVehiclePhysics", "PrintDebug_Engine",
+			"Engine Power = {0} kW\n"
+			"Engine Torque = {1} N.m\n"
+			"Engine Inertia = {2} kgm^2\n"
+			"Engine Angular Acceleration = {3} Rad/s^2\n"
+			"Engine Angular Deceleration = {4} Rad/s^2\n"
+			"Engine Angular Velocity = {5} Rad/s\n"
+			"Current RPM = {6} RPM"),
+		EP, ET, FI, EAA, EAD, EAV, ERPM
+	);
+
+	UKismetSystemLibrary::PrintText(
+		this, EngineText,
+		/*bPrintToScreen*/ true,
+		/*bPrintToLog*/   false,
+		/*TextColor*/     FLinearColor(1.f, 1.f, 0.f, 1.f),   // (R=1,G=1,B=0,A=1)
+		/*Duration*/      0.f,
+		/*Key*/           NAME_None
+	);
+
+	// ---------- Block 4: Fuel & energy (K2Node_FormatText_2 -> PrintText_113) ----------
+	const FText FE = UKismetTextLibrary::Conv_DoubleToText(CurrentFuelEnergy, ERoundingMode::HalfToEven, false, true, 1, 324, 2, 2);
+	const FText FC = UKismetTextLibrary::Conv_DoubleToText(FuelConsumption, ERoundingMode::HalfToEven, false, true, 1, 324, 2, 8);
+	const double FuelLeftLiters = MechanicalData.FuelData.FuelLeft; // from BreakStruct path
+	const FText FL = UKismetTextLibrary::Conv_DoubleToText(FuelLeftLiters, ERoundingMode::HalfToEven, false, true, 1, 324, 2, 8);
+	const FText CKE = UKismetTextLibrary::Conv_DoubleToText(GetCurrentEngineKineticEnergy(), ERoundingMode::HalfToEven, false, true, 1, 324, 2, 2);
+
+	const FText FuelText = FText::Format(
+		NSLOCTEXT("ACVehiclePhysics", "PrintDebug_Fuel",
+			"Current Fuel Energy = {0} Watt*s\n"
+			"Current Fuel Consumption = {1} cm^3/s\n"
+			"Current Fuel Left = {2} cm^3/s\n"
+			"Current Kinetic Energy = {3} Watt*s"),
+		FE, FC, FL, CKE
+	);
+
+	UKismetSystemLibrary::PrintText(
+		this, FuelText,
+		/*bPrintToScreen*/ true,
+		/*bPrintToLog*/   false,
+		/*TextColor*/     FLinearColor(1.f, 0.08304f, 0.f, 1.f), // (R=1,G=0.08304,B=0,A=1)
+		/*Duration*/      0.f,
+		/*Key*/           NAME_None
+	);
+#endif // !(UE_BUILD_SHIPPING)
 }
 
 void UACVehiclePhysics::CalcTransmissionTorque(double ClutchTorqueP)
 {
-	double TotalGearRatio = 0;
-	GetTotalGearRatio(TotalGearRatio);
+	double TotalGearRatio = GetTotalGearRatio();
 	double TotalDriveTorque = FMath::Max(ClutchTorque, 0.0) * TotalGearRatio;
 	
 	TransmissionTorque = TotalDriveTorque;
@@ -609,35 +1128,27 @@ void UACVehiclePhysics::CalcTransmissionTorque(double ClutchTorqueP)
 	}
 }
 
-void UACVehiclePhysics::GetTotalTransmissionVelocity(double& TotalTransmissionVelocity)
-{
-	double TransmissionVelocityL = 0.0;
-
-	for (UObject* Obj : AxisArray)
-	{
-		if (!IsValid(Obj)) 
-			continue;
-
-		USCAxis* Axis = Cast<USCAxis>(Obj);
-		if (!Axis) continue;
-
-		double AxisVel = 0;
-		Axis->GetCurrentAxisVelocity(AxisVel);
-		TransmissionVelocityL += AxisVel * Axis->AxisDriveTorqueRatio;
-	}
-
-}
-
 void UACVehiclePhysics::SetWheelFeedback()
 {
+	ClutchDiskAngularVelocity = GetTotalTransmissionVelocity() * GetTotalGearRatio();
+	//EngineAngularVelocity = GetTotalTransmissionVelocity() * GetTotalGearRatio();
+
+	//EngineAngularVelocity - ClutchDiskAngularVelocity
+
+	//GetTotalTractionTorque() - GetTotalFrictionTorque()
+	
+	//EngineAngularVelocity + GetTotalGearRatio() * GetTotalFrictionTorque() / GetEngineInertia() * CurrentGear != 1 * (GetWorld() ? GetWorld()->GetDeltaSeconds() : 0.f);
+
+	//TransmissionTorque = FMath::Lerp(GetTotalFrictionTorque() * GetTotalGearRatio(), EngineTorque, ClutchLock);
+	//ClutchTorque = TransmissionTorque;
 }
 
-void UACVehiclePhysics::GetTotalFrictionAcceleration(double& Output_Get)
+double UACVehiclePhysics::GetTotalFrictionAcceleration()
 {
 
 	if (AxisArray.Num() < 2 || AxisDriveTorqueRatios.Num() < 2)
 	{
-		Output_Get = 0.f;
+		return 0.f;
 	}
 	double Inner0 = 0.f;
 	double Inner1 = 0.f;
@@ -650,10 +1161,8 @@ void UACVehiclePhysics::GetTotalFrictionAcceleration(double& Output_Get)
 			const USCWheel* S0 = Axis->Suspensions[0];
 			const USCWheel* S1 = Axis->Suspensions[1];
 
-			double WheelInertia0 = 0;
-			Axis->Suspensions[0]->GetWheelInertia(WheelInertia0);
-			double WheelInertia1 = 0;
-			Axis->Suspensions[1]->GetWheelInertia(WheelInertia1);
+			const double WheelInertia0 = Axis->Suspensions[0]->GetWheelInertia();
+			const double WheelInertia1 = Axis->Suspensions[1]->GetWheelInertia();
 
 			return Axis->Suspensions[0]->WheelFrictionTorque * WheelInertia0 + Axis->Suspensions[1]->WheelFrictionTorque * WheelInertia1;
 		};
@@ -667,26 +1176,20 @@ void UACVehiclePhysics::GetTotalFrictionAcceleration(double& Output_Get)
 		Inner1 * AxisDriveTorqueRatios[1];
 
 	// BP final: multiply by 0.5 and return (also assigned to "Total Friction Acceleration")
-	Output_Get = 0.5f * WeightedSum;
+	return 0.5f * WeightedSum;
 }
 
 void UACVehiclePhysics::SplitAxisReferences()
 {
 	// BP: GetVehicle -> VehicleBody (SkeletalMeshComponent)
-	AVehicle* Vehicle = nullptr;
-	GetVehicle(Vehicle);
+	AVehicle* Vehicle = GetVehicle();
 	if (!Vehicle)
 	{
 		return;
 	}
 
 	// Expect a USkeletalMeshComponent named VehicleBody on Vehicle
-	USkeletalMeshComponent* VehicleBody = nullptr;
-	// If VehicleBody is public:
-	//     VehicleBody = Vehicle->VehicleBody;
-	// If not, replace with your accessor, e.g. Vehicle->GetVehicleBody();
-	VehicleBody = /* Vehicle->VehicleBody or Vehicle->GetVehicleBody() */ nullptr;
-
+	USkeletalMeshComponent* VehicleBody = Vehicle->VehicleBody;
 	if (!VehicleBody)
 	{
 		return;
@@ -808,144 +1311,85 @@ void UACVehiclePhysics::InitBrakeRatios()
 	}
 }
 
-void UACVehiclePhysics::CalcClutch(double InEngineTorque, double& OutClutchTorque)
+void UACVehiclePhysics::SetTurboLoadRatioAndTriggerSound(double TurboMultiplier)
 {
-	double Rpm = 0.0;
-	GetEngineRpm(Rpm);
-
-	
-	const double AutoLock = FMath::GetMappedRangeValueClamped(FVector2D(1000, 1300), FVector2D(0, 1), Rpm);
-	const double ManualLock = 1.0 - ClutchValue;
-	
-	//SelectFloat: if (GearBoxType != HShifter) pick AutoLock, else pick ManualLock
-	const double LockCandidate = (MechanicalData.GearBoxData.GearBoxType != EGearBoxType::HShifter) ? AutoLock : ManualLock;
-
-	//If (CurrentGear == 1) ClutchLock = 0.0 else ClutchLock = LockCandidate
-	ClutchLock = (CurrentGear == 1) ? 0.0 : LockCandidate;
-
-	//Lerp(TransmissionTorque / GetTotalGearRatio, InEngineTorque, Alpha = ClutchLock )
-	double TotalGearRatioL = 0.0;
-	GetTotalGearRatio(TotalGearRatioL);
-
-	const double FromTransmissionSide = (TotalGearRatioL != 0.0) ? (TransmissionTorque / TotalGearRatioL) : 0.0;
-	const double FromEngineSide = InEngineTorque;
-
-	// FMath::Lerp for double
-	const double ClutchTorqueLoad = FMath::Lerp(FromTransmissionSide, FromEngineSide, ClutchLock);
-
-	//Clamp to [-ClutchCapacity .. +ClutchCapacity] ---
-	const double Cap = static_cast<double>(MechanicalData.ClutchData.ClutchCapacity);
-	const double ClutchTorqueLoadClamped = FMath::Clamp(ClutchTorqueLoad, -Cap, Cap);
-
-	//Multiply by SClutch.Efficiency ---
-	const double ClutchEfficiency = static_cast<double>(MechanicalData.ClutchData.Efficiency);
-	ClutchTorque = ClutchEfficiency * ClutchTorqueLoadClamped;
-
-	//Set variable & FunctionResult(ClutchTorque)
-	OutClutchTorque = ClutchTorque;
-}
-
-void UACVehiclePhysics::GetTotalTractionTorque(double& TotalTransmissionDriveTorque)
-{
-	TotalTransmissionDriveTorque = 0;
-	for(auto& Axis : AxisArray)
+	// if (ThrottleValue > 0)
+	if (ThrottleValue > 0.0)
 	{
-		if (!IsValid(Axis)) 
-			continue;
+		// --- TRUE branch: build turbo sound ratio & boost multiplier ---
+		FSTurbo& Turbo = MechanicalData.TurboData;
+		const FSEngine& Engine = MechanicalData.EngineData;
 
-		double AxisTractionTorque = 0;
-		Axis->GetCurrentAxisTractionTorque(AxisTractionTorque);
+		const double TurboPressureAsDouble = static_cast<double>(Turbo.TurboPressure);
+		const bool bTurboPressureLEZero = (TurboPressureAsDouble <= 0.0);
 
-		TotalTransmissionDriveTorque += AxisTractionTorque * Axis->AxisDriveTorqueRatio;
+		// Select( cond = (TurboPressure <= 0) ? 0 : abs(TempTurboPressure) / TurboPressureCapacity )
+		const double normTurbo =
+			bTurboPressureLEZero
+			? 0.0
+			: FMath::Abs(TempTurboPressure) / FMath::Max(1e-6, static_cast<double>(Turbo.TurboPressureCapacity));
+
+		// FClamp(value, 0.0, 0.95)
+		const double Clamped = FMath::Clamp(normTurbo, 0.0, 0.95);
+
+		// Save TurboSoundRatio (VariableSet)
+		TurboSoundRatio = Clamped;
+
+		// torqueBoostPercent = TorqueCurve(CurrentRPM) / 100.0
+		double torqueBoostPercent = 0.0;
+		if (Engine.TorqueCurve)
+		{
+			const float CurveVal = Engine.TorqueCurve->GetFloatValue(static_cast<float>(Engine.CurrentRPM));
+			torqueBoostPercent = static_cast<double>(CurveVal) / 100.0;
+		}
+
+		// TurboBoostMultiplier = 1.0 + (Clamped * torqueBoostPercent * TurboMultiplier)
+		TurboBoostMultiplier = 1.0 + (Clamped * torqueBoostPercent * TurboMultiplier);
+
+		// SetFieldsInStruct(IsTurboReleased = false)
+		Turbo.IsTurboReleased = false;
+
+		// Reset the blow-off DoOnce gate so next release can trigger again
+		bTurboBlowOffDoOnceGate = false;
 	}
-}
-
-void UACVehiclePhysics::GetTotalFrictionTorque(double& TotalTransmissionFrictionTorque)
-{
-	TotalTransmissionFrictionTorque = 0;
-	for (auto& Axis : AxisArray)
+	else
 	{
-		if (!IsValid(Axis))
-			continue;
+		// --- FALSE branch: trigger blow-off once when turbo wasn't released yet ---
+		FSTurbo& Turbo = MechanicalData.TurboData;
 
-		double AxisFrictionTorque = 0;
-		Axis->GetCurrentAxisFrictionTorque(AxisFrictionTorque);
-		TotalTransmissionFrictionTorque += AxisFrictionTorque * Axis->AxisDriveTorqueRatio;
+		// Condition: Not_PreBool( Break(TurboData).IsTurboReleased )
+		const bool bShouldTrigger = !Turbo.IsTurboReleased;
+
+		if (bShouldTrigger)
+		{
+			// DoOnce -> CallDelegate( Round( MapRangeClamped( abs(TempTurboPressure)/Cap, 0..1 -> 0..3 ) ) )
+			if (!bTurboBlowOffDoOnceGate)
+			{
+				const double BlowOffRatio = FMath::Abs(TempTurboPressure) / FMath::Max(1e-6, static_cast<double>(Turbo.TurboPressureCapacity));
+				const double Mapped = FMath::GetMappedRangeValueClamped(
+					FVector2D(0.0, 1.0),
+					FVector2D(0.0, 3.0),
+					BlowOffRatio
+				);
+				const int32 Stage = FMath::RoundToInt(Mapped);
+
+				PlayTurboLoadSound.Broadcast(Stage);
+				bTurboBlowOffDoOnceGate = true;         // macro “Completed”
+			}
+
+			// SetFieldsInStruct(IsTurboReleased = true)
+			Turbo.IsTurboReleased = true;
+
+			// VariableSet TurboSoundRatio (BP pin was unconnected -> defaults to 0.0)
+			TurboSoundRatio = 0.0;
+
+			// VariableSet TurboBoostMultiplier = 1.0
+			TurboBoostMultiplier = 1.0;
+
+			// Knot reset wired back to DoOnce.Reset
+			bTurboBlowOffDoOnceGate = false;
+		}
 	}
-}
-
-void UACVehiclePhysics::GetWorldTemperature(double& Temp)
-{
-	AVehicle* Vehicle = nullptr;
-	GetVehicle(Vehicle);
-	Vehicle->GetWorldTemperature(Temp);
-}
-
-double UACVehiclePhysics::GetSteeringAngle(float Steering, USCWheel* Suspension)
-{
-	FSAxis AxisSetup;
-	Suspension->GetAxisSetup(AxisSetup);
-	if (!IsValid(Suspension) || AxisSetup.AxisName.IsNone())
-	{
-		return Steering;
-	}
-
-	FTransform SockXform = Suspension->GetSocketTransform(AxisSetup.AxisName, ERelativeTransformSpace::RTS_Actor);
-
-	FVector Loc = SockXform.GetLocation(); // BP: Break Transform → Location → Break Vector
-
-	return (Loc.X < 0.0f) ? -1.0f * Steering : Steering;
-}
-
-bool UACVehiclePhysics::IsAxisCountEqualToConfig()
-{
-	TArray<FName> AxisSockets;
-	GetAxisSockets(AxisSockets);
-
-	if ((AxisSockets.Num() == MechanicalData.AxisData.Num()))
-		return true;
-
-	// BP: Branch → False → Print String (red, 20s)
-	const FString Msg = TEXT("You need to match axis data item count to Vehicle Mesh's axis socket count.");
-	if (GEngine)
-		GEngine->AddOnScreenDebugMessage(-1, 20.f, FColor::Red, Msg);
-
-	UE_LOG(LogTemp, Warning, TEXT("%s (Sockets=%d, AxisData=%d)"), *Msg, AxisSockets.Num(), MechanicalData.AxisData.Num());
-
-	return false;
-}
-
-double UACVehiclePhysics::DistanceOfCurrentAxisToLastAxis(FName InSocketName)
-{
-	// Get vehicle & skeletal mesh (VehicleBody)
-	AVehicle* VehicleActor;
-	GetVehicle(VehicleActor);
-	if (!VehicleActor || !VehicleActor->VehicleBody)
-	{
-		return 0.0;
-	}
-
-	// Need at least one axis to compare against
-	if (AxisArray.Num() <= 0)
-	{
-		return 0.0;
-	}
-
-	// Last axis in the array
-	USCAxis* LastAxis = AxisArray[AxisArray.Num() - 1];
-	if (!LastAxis)
-	{
-		return 0.0;
-	}
-
-	FName LastAxisSocket = LastAxis->AxisSetup.AxisName;
-
-	// World locations of the sockets (falls back to component location if socket missing)
-	FVector CurrentAxisLoc = VehicleActor->VehicleBody->GetSocketLocation(InSocketName);
-	FVector LastAxisLoc = VehicleActor->VehicleBody->GetSocketLocation(LastAxisSocket);
-
-	// Distance (match BP "Vector_Distance")
-	return static_cast<double>(FVector::Distance(CurrentAxisLoc, LastAxisLoc));
 }
 
 void UACVehiclePhysics::SetSteeringValueByAckermannAccuracy(USCWheel* Suspension, FName SocketName, double CurrentRotationAngle, double AxisWidth)
@@ -1003,4 +1447,424 @@ void UACVehiclePhysics::SetSteeringValueByAckermannAccuracy(USCWheel* Suspension
 	}
 
 	Suspension->SteeringAngle = targetAngle;
+}
+
+TArray<USCWheel*> UACVehiclePhysics::GetSuspensions()
+{
+	TArray<USCWheel*> OutSuspensions;
+	OutSuspensions.Empty();
+	int32 ReserveCount = 0;
+	for (const USCAxis* Axis : AxisArray)
+	{
+		if (IsValid(Axis))
+		{
+			ReserveCount += Axis->Suspensions.Num();
+		}
+	}
+	OutSuspensions.Reserve(ReserveCount);
+
+	// Outer loop over axes
+	for (const USCAxis* Axis : AxisArray)
+	{
+		if (!IsValid(Axis)) continue;
+
+		// Inner loop over that axis' SuspensionsX
+		for (USCWheel* S : Axis->Suspensions)
+		{
+			if (IsValid(S))
+			{
+				OutSuspensions.Add(S);
+			}
+		}
+	}
+	return OutSuspensions;
+}
+
+double UACVehiclePhysics::GetForwardSpeed()
+{
+	AVehicle* Vehicle = GetVehicle();
+	if (!IsValid(Vehicle))
+	{
+		return Vehicle->GetVelocity().Size();
+	}
+
+	return 0.0;
+}
+
+double UACVehiclePhysics::CalcClutch(double InEngineTorque)
+{
+	const double AutoLock = FMath::GetMappedRangeValueClamped(FVector2D(1000, 1300), FVector2D(0, 1), GetEngineRpm());
+	const double ManualLock = 1.0 - ClutchValue;
+	
+	//SelectFloat: if (GearBoxType != HShifter) pick AutoLock, else pick ManualLock
+	const double LockCandidate = (MechanicalData.GearBoxData.GearBoxType != EGearBoxType::HShifter) ? AutoLock : ManualLock;
+
+	//If (CurrentGear == 1) ClutchLock = 0.0 else ClutchLock = LockCandidate
+	ClutchLock = (CurrentGear == 1) ? 0.0 : LockCandidate;
+
+	//Lerp(TransmissionTorque / GetTotalGearRatio, InEngineTorque, Alpha = ClutchLock )
+	const double FromTransmissionSide = (GetTotalGearRatio() != 0.0) ? (TransmissionTorque / GetTotalGearRatio()) : 0.0;
+	const double FromEngineSide = InEngineTorque;
+
+	// FMath::Lerp for double
+	const double ClutchTorqueLoad = FMath::Lerp(FromTransmissionSide, FromEngineSide, ClutchLock);
+
+	//Clamp to [-ClutchCapacity .. +ClutchCapacity] ---
+	const double Cap = static_cast<double>(MechanicalData.ClutchData.ClutchCapacity);
+	const double ClutchTorqueLoadClamped = FMath::Clamp(ClutchTorqueLoad, -Cap, Cap);
+
+	//Multiply by SClutch.Efficiency ---
+	const double ClutchEfficiency = static_cast<double>(MechanicalData.ClutchData.Efficiency);
+	ClutchTorque = ClutchEfficiency * ClutchTorqueLoadClamped;
+
+	//Set variable & FunctionResult(ClutchTorque)
+	return ClutchTorque;
+}
+
+double UACVehiclePhysics::GetTotalTractionTorque()
+{
+	double TotalTransmissionDriveTorqueL = 0;
+	for(auto& Axis : AxisArray)
+	{
+		if (!IsValid(Axis)) 
+			continue;
+
+		double AxisTractionTorque = Axis->GetCurrentAxisTractionTorque();
+
+		TotalTransmissionDriveTorqueL += AxisTractionTorque * Axis->AxisDriveTorqueRatio;
+	}
+
+	return TotalTransmissionDriveTorqueL;
+}
+
+double UACVehiclePhysics::GetTotalFrictionTorque()
+{
+	double TotalTransmissionFrictionTorqueL = 0;
+	for (auto& Axis : AxisArray)
+	{
+		if (!IsValid(Axis))
+			continue;
+
+		double AxisFrictionTorque = Axis->GetCurrentAxisFrictionTorque();
+		TotalTransmissionFrictionTorqueL += AxisFrictionTorque * Axis->AxisDriveTorqueRatio;
+	}
+
+	return TotalTransmissionFrictionTorqueL;
+}
+
+double UACVehiclePhysics::GetWorldTemperature() const
+{
+	return GetVehicle()->GetWorldTemperature();
+}
+
+double UACVehiclePhysics::GetSteeringAngle(float Steering, USCWheel* Suspension)
+{
+	const FSAxis AxisSetup = Suspension->GetAxisSetup();
+	if (!IsValid(Suspension) || AxisSetup.AxisName.IsNone())
+	{
+		return Steering;
+	}
+
+	FTransform SockXform = Suspension->GetSocketTransform(AxisSetup.AxisName, ERelativeTransformSpace::RTS_Actor);
+
+	FVector Loc = SockXform.GetLocation(); // BP: Break Transform → Location → Break Vector
+
+	return (Loc.X < 0.0f) ? -1.0f * Steering : Steering;
+}
+
+double UACVehiclePhysics::DistanceOfCurrentAxisToLastAxis(FName InSocketName)
+{
+	// Get vehicle & skeletal mesh (VehicleBody)
+	const AVehicle* Vehicle = GetVehicle();
+	if (!Vehicle || !Vehicle->VehicleBody)
+	{
+		return 0.0;
+	}
+
+	// Need at least one axis to compare against
+	if (AxisArray.Num() <= 0)
+	{
+		return 0.0;
+	}
+
+	// Last axis in the array
+	USCAxis* LastAxis = AxisArray[AxisArray.Num() - 1];
+	if (!LastAxis)
+	{
+		return 0.0;
+	}
+
+	FName LastAxisSocket = LastAxis->AxisSetup.AxisName;
+
+	// World locations of the sockets (falls back to component location if socket missing)
+	FVector CurrentAxisLoc = Vehicle->VehicleBody->GetSocketLocation(InSocketName);
+	FVector LastAxisLoc = Vehicle->VehicleBody->GetSocketLocation(LastAxisSocket);
+
+	// Distance (match BP "Vector_Distance")
+	return static_cast<double>(FVector::Distance(CurrentAxisLoc, LastAxisLoc));
+}
+
+double UACVehiclePhysics::GetEngineInertia() const
+{
+	return FMath::Square(MechanicalData.EngineData.FlywheelRadius) * MechanicalData.EngineData.FlywheelMass * 0.5;
+}
+
+double UACVehiclePhysics::GetEngineMinKineticEnergy() const {
+	double IdleAngularVelocity = RpmToRadS(MechanicalData.EngineData.IdleRPM);
+	return 0.5 * GetEngineInertia() * FMath::Square(MechanicalData.EngineData.IsEngineStarted ? IdleAngularVelocity : 0.0);
+}
+
+double UACVehiclePhysics::GetEngineMaxKineticEnergy() const {
+	double MaxAngularVelocity = RpmToRadS(MechanicalData.EngineData.MaxRPM);
+	return 0.5 * GetEngineInertia() * FMath::Square(MaxAngularVelocity);
+}
+
+double UACVehiclePhysics::GetEngineMinAngularVelocity() const {
+	return FMath::Sqrt(GetEngineMinKineticEnergy() * 2 / GetEngineInertia());
+}
+
+double UACVehiclePhysics::GetEngineMaxAngularVelocity() const {
+	return FMath::Sqrt(GetEngineMaxKineticEnergy() * 2 / GetEngineInertia());
+}
+
+double UACVehiclePhysics::GetCurrentEngineKineticEnergy() const
+{
+	// If engine is not started we still return kinetic energy
+	// at its minimum (idle) if you want a warm idle, otherwise 0.
+	// Your GetEngineMinKineticEnergy() already handles that logic.
+	if (!MechanicalData.EngineData.IsEngineStarted)
+	{
+		return GetEngineMinKineticEnergy();
+	}
+
+	const double Inertia = GetEngineInertia();
+	if (Inertia <= KINDA_SMALL_NUMBER)
+	{
+		return 0.0; // avoid division / invalid math if setup is degenerate
+	}
+
+	// Clamp ω into physical range (min idle .. max rpm) before squaring.
+	const double Omega = FMath::Clamp(EngineAngularVelocity, GetEngineMinAngularVelocity(), GetEngineMaxAngularVelocity());
+
+	// Ek = 0.5 * I * ω^2
+	return 0.5 * Inertia * Omega * Omega;
+}
+
+double UACVehiclePhysics::GetEngineAngularAcceleration() const 
+{
+	/*
+	//Set Current Angular Acceleration by calculating KineticEnergy difference, VelocityDiffrence to increase and increase acceleration.
+	double SecondsToFinishRevUp = 1.0; // Hardcoded in BP
+	double AccelEnergyToBeConsumed = GetEngineMaxKineticEnergy - GetCurrentEngineKineticEnergy();
+
+	//(Δω)^2 = ΔEk*2/I
+	double VelocityDiffToAccelIn1Second = FMath::Sqrt(2 * AccelEnergyToBeConsumed / EngineInertia);
+	double AccelerationToAcceleratingVelocityDifferenceIn1Scond = FMath::Square(SecondsToFinishRevUp)* VelocityDiffToAccelIn1Second;
+	*/
+
+	double EngineAngularVelotity = FMath::Clamp(EngineAngularVelocity, GetEngineMinAngularVelocity(), GetEngineMaxAngularVelocity());
+	double EngineRpm = RadSToRpm(EngineAngularVelocity);
+
+	double EngineInlineTorque = MechanicalData.EngineData.TorqueCurve->GetFloatValue(EngineRpm);
+	double CurrentTorque = EngineInlineTorque * NitroBoostMultiplier * TurboBoostMultiplier;
+
+	double AngularAcceleration = CurrentTorque / GetEngineInertia();
+
+	//EngineAngularAcceleration = AngularAcceleration * ThrottleValue;
+	return UKismetMathLibrary::InRange_FloatFloat(RadSToRpm(EngineAngularVelocity), MechanicalData.EngineData.IdleRPM, MechanicalData.EngineData.MaxRPM, true, false) ? AngularAcceleration * ThrottleValue : 0;
+
+}
+
+double UACVehiclePhysics::GetEngineAngularDeceleration() const
+{
+	//Calculate Deceleration to return from Current Kinetic Energy to Idle Kinetic Energy when throttle is not more than 0.
+	/*
+	double EngineAngularVelocityL = FMath::Clamp(EngineAngularVelocity, GetEngineMinAngularVelocity(), GetEngineMaxAngularVelocity());
+	double EngineRpm = RadSToRpm(EngineAngularVelocityL);
+	double EngineInlineTorque = MechanicalData.EngineData.TorqueCurve->GetFloatValue(EngineRpm);
+	double CurrentTorque = EngineInlineTorque;
+	double AngularDeceleration = CurrentTorque / GetEngineInertia();
+	return (ThrottleValue == 0.0) ? AngularDeceleration : 0.0;
+	*/
+
+	
+	//Set Current Angular Deceleration by calculating KineticEnergy difference, VelocityDiffrence to decrease and decrease acceleration.
+	double SecondsToFinishRevUp = 1.0; // Hardcoded in BP
+	double DecelEnergyToBeConsumed = GetCurrentEngineKineticEnergy() - GetEngineMinKineticEnergy();
+
+	//(Δω)^2 = ΔEk*2/I
+	double VelocityDiffToDecelIn1Second = FMath::Sqrt(2 * DecelEnergyToBeConsumed / GetEngineInertia());
+	double DecelerationToDeceleratingVelocityDifferenceIn1Scond = FMath::Square(SecondsToFinishRevUp) * VelocityDiffToDecelIn1Second * static_cast<double>(ThrottleValue == 0);
+	
+	return DecelerationToDeceleratingVelocityDifferenceIn1Scond;
+	
+}
+
+double UACVehiclePhysics::CalcEngine()
+{
+	//Set EngineAngularVelocity Increase EngineAngularVelocity by NeededAcceleration* ThrottleValue Clamp EngineAngularVelocity to Min and MaxEngineAngularVelocity
+	double LocalEngineTorqueP = 0;
+
+	double EngineAngularAccelerationL = GetEngineAngularAcceleration();
+	double EngineAngularDecelerationL = GetEngineAngularDeceleration();
+
+	LocalEngineTorqueP = GetEngineInertia() * (EngineAngularAccelerationL - EngineAngularDecelerationL);
+	EngineTorque = LocalEngineTorqueP;
+
+	EngineAngularVelocity = FMath::Clamp(
+		EngineAngularVelocity + (EngineAngularAccelerationL - EngineAngularDecelerationL) * (GetWorld() ? GetWorld()->GetDeltaSeconds() : 0.f),
+		GetEngineMinAngularVelocity(),
+		GetEngineMaxAngularVelocity()
+	);
+
+	MechanicalData.EngineData.CurrentRPM = RadSToRpm(EngineAngularVelocity);
+	//Engine Heat Up and Down
+	if (MechanicalData.EngineData.CurrentTemperature < MechanicalData.EngineData.AvgTemp) {
+		//Engine Heatup to min temp (World Temperature) if engine temp is lower than AvgTemp
+		MechanicalData.EngineData.CurrentTemperature = FMath::Clamp(
+			MechanicalData.EngineData.CurrentTemperature + 3 * MechanicalData.EngineData.CurrentRPM / MechanicalData.EngineData.MaxRPM * (GetWorld() ? GetWorld()->GetDeltaSeconds() : 0.f),
+			0,
+			MechanicalData.EngineData.AvgTemp
+		);
+	}
+	else {
+		//If Current Temp is equal or above Average Temp, start lerping between Avg and Max Temp by respecting RPM Ratio.
+		MechanicalData.EngineData.CurrentTemperature = FMath::Clamp(
+			UKismetMathLibrary::FInterpTo_Constant(
+				MechanicalData.EngineData.CurrentTemperature,
+				FMath::Lerp(MechanicalData.EngineData.AvgTemp, MechanicalData.EngineData.MaxRPM, MechanicalData.EngineData.CurrentRPM / MechanicalData.EngineData.MaxRPM * ThrottleValue * 2),
+				GetWorld() ? GetWorld()->GetDeltaSeconds() : 0.f,
+				1.0f),
+			0,
+			MechanicalData.EngineData.MaxTemp);
+	}
+
+	//Is Engine getting pain?
+	if (IsEngineOverheating()) {
+		//Start to decrease Engine Health if Current Temp/Max Temp ratio is more than or equal to 0,95.
+		MechanicalData.EngineData.EngineHealth = MechanicalData.EngineData.EngineHealth - 5 * (GetWorld() ? GetWorld()->GetDeltaSeconds() : 0.f);
+	}
+
+	if (MechanicalData.EngineData.EngineHealth > 0) {
+
+		return LocalEngineTorqueP;
+	}
+	else {
+		if (MechanicalData.EngineData.IsEngineStarted && !bKillEngineDoOnceGate) {
+			KillEngine();
+			bKillEngineDoOnceGate = true;
+		}
+	}
+
+	return LocalEngineTorqueP;
+
+}
+
+double UACVehiclePhysics::GetCurrentFuelEnergy() const{
+	return (ThrottleValue > 0 ? GetCurrentEngineKineticEnergy() : GetEngineMinKineticEnergy()) * MechanicalData.EngineData.EnergyCoefficient;
+}
+
+double UACVehiclePhysics::GetSteeringValue() const
+{
+	return SteeringValue;
+}
+
+double UACVehiclePhysics::RpmToRadS(double Rpm) const
+{
+	return Rpm * RPM_TO_RAD_PER_SEC;
+}
+
+double UACVehiclePhysics::RadSToRpm(double RadS) const
+{
+	return RadS / RPM_TO_RAD_PER_SEC;
+}
+
+double UACVehiclePhysics::HpToWatt(double Hp) const
+{
+	return Hp * 745.7;
+}
+
+double UACVehiclePhysics::GetThrottleValue() const
+{
+	return ThrottleValue;
+}
+
+double UACVehiclePhysics::KelvinToCelsius(double Kelvin) const
+{
+	return Kelvin - 273.15;
+}
+
+double UACVehiclePhysics::CalorieToJoule(double Calorie) const
+{
+	return Calorie * 4.184;
+}
+
+double UACVehiclePhysics::CelsiusToKelvin(double Celsius) const
+{
+	return Celsius + 273.15;
+}
+
+double UACVehiclePhysics::GetCurrentPower() const
+{
+	return GetEngineRpm() * EngineTorque / 9.5488 / 1000;
+}
+
+double UACVehiclePhysics::GetEngineRpm() const
+{
+	return MechanicalData.EngineData.CurrentRPM;
+}
+
+double UACVehiclePhysics::GetTotalGearRatio()
+{
+	return MechanicalData.GearBoxData.Efficiency * MechanicalData.GearBoxData.FinalDriveRatio * MechanicalData.GearBoxData.GearRatios[CurrentGear].GearRatio;
+}
+
+double UACVehiclePhysics::CmsToKmh(double Cms) const
+{
+	return Cms * 0.036;
+}
+
+double UACVehiclePhysics::GetTotalTransmissionVelocity()
+{
+	double TransmissionVelocityL = 0.0;
+
+	for (UObject* Obj : AxisArray)
+	{
+		if (!IsValid(Obj))
+			continue;
+
+		USCAxis* Axis = Cast<USCAxis>(Obj);
+		if (!Axis) continue;
+
+		double AxisVel = Axis->GetCurrentAxisVelocity();
+		TransmissionVelocityL += AxisVel * Axis->AxisDriveTorqueRatio;
+	}
+	return TransmissionVelocityL;
+}
+
+bool UACVehiclePhysics::IsEngineOverheating() const
+{
+	return MechanicalData.EngineData.CurrentTemperature / MechanicalData.EngineData.MaxTemp >= 0.95;
+}
+
+bool UACVehiclePhysics::IsAxisCountEqualToConfig()
+{
+	TArray<FName> AxisSockets = GetAxisSockets();
+
+	if ((AxisSockets.Num() == MechanicalData.AxisData.Num()))
+		return true;
+
+	// BP: Branch → False → Print String (red, 20s)
+	const FString Msg = TEXT("You need to match axis data item count to Vehicle Mesh's axis socket count.");
+	if (GEngine)
+		GEngine->AddOnScreenDebugMessage(-1, 20.f, FColor::Red, Msg);
+
+	UE_LOG(LogTemp, Warning, TEXT("%s (Sockets=%d, AxisData=%d)"), *Msg, AxisSockets.Num(), MechanicalData.AxisData.Num());
+
+	return false;
+}
+
+int UACVehiclePhysics::GetCurrentGear() const
+{
+	return CurrentGear;
 }

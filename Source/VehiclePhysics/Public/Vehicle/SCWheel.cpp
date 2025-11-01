@@ -42,22 +42,39 @@ void USCWheel::TickComponent(float DeltaTime, ELevelTick TickType, FActorCompone
 
 void USCWheel::ConstructSuspension()
 {
-	FSSuspension SuspensionSetup;
-	GetSuspensionSetup(SuspensionSetup);
+	const FSSuspension SuspensionSetup = GetSuspensionSetup();
 	
 	LastSpringLength = SuspensionSetup.RestLength;
 	CurrentSpringLength = SuspensionSetup.RestLength;
 }
 
-void USCWheel::UpdatePhysics_Implementation(const double& InDeltaTime)
+void USCWheel::UpdatePhysics(const double& InDeltaTime)
 {
+	DeltaTimer = InDeltaTime;
+
+	SetRelativeLocation(FVector(0, 0, SteeringAngle));
+	RadialMultiRayCast();
+	SetSuspensionForce();
+	ApplySuspensionForce();
+	SetTireForceCombined();
+	SetFrictionForces();
+	SetTractionTorque();
+	ApplyBrakeTorque();
+	SetFrictionTorque();
+	ApplyTireForce();
+	//SetWheelAngularVelocity();
+	ResetHitValues();
+	DrawDebugLines();
+	PrintDebug();
+	SetWheelVisualRelativeRotation();
+
+
 }
 
 void USCWheel::RadialMultiRayCast()
 {
-	// --- BP If: (W_RayCountPerDepth % 2 == 0) AND (W_RayYaxisDepth % 2 == 0) ---
-	const bool bRayCountEven = FMath::IsNearlyZero(FMath::Fmod(W_RayCountPerDepth, 2.0));
-	const bool bYDepthEven = (W_RayYaxisDepth % 2) == 0;
+	bool bRayCountEven = FMath::Fmod(W_RayCountPerDepth, 2.0) == 0;
+	bool bYDepthEven = (W_RayYaxisDepth % 2) == 0;
 
 	if (!(bRayCountEven && bYDepthEven))
 	{
@@ -73,10 +90,10 @@ void USCWheel::RadialMultiRayCast()
 	}
 
 	// --- Outer ForLoop: y = - (W_RayYaxisDepth / 2)  ..  + (W_RayYaxisDepth / 2) ---
-	const int32 HalfY = W_RayYaxisDepth / 2;
+	int32 HalfY = W_RayYaxisDepth / 2;
 
 	// --- Inner ForLoop: XIndex = -trunc(W_RayCountPerDepth / 2.0) .. +trunc(W_RayCountPerDepth / 2.0) ---
-	const int32 HalfX = FMath::TruncToInt(W_RayCountPerDepth / 2.0);
+	int32 HalfX = FMath::TruncToInt(W_RayCountPerDepth / 2.0);
 
 	for (int32 YIndex = -HalfY; YIndex <= HalfY; ++YIndex)
 	{
@@ -85,44 +102,45 @@ void USCWheel::RadialMultiRayCast()
 			// BP branch (Index == 0) ultimately feeds the same chain; the “else” explicitly writes the variable.
 			// Compute WheelRelativeLocation:
 			//   WheelRelativeLocation = GetUpVector()*CurrentSpringLength - GetYAxisOffsetToRayStartForAxisSlopeAngle()
-			const FVector TempWheelRelativeLocation = GetUpVector() * CurrentSpringLength - GetYAxisOffsetToRayStartForAxisSlopeAngle();
+			FVector TempWheelRelativeLocation = GetUpVector() * CurrentSpringLength - GetYAxisOffsetToRayStartForAxisSlopeAngle();
 			if (XIndex != 0)
 			{
 				WheelRelativeLocation = TempWheelRelativeLocation;
 			}
 
 			// WheelCenterWorld = K2_GetComponentLocation() - WheelRelativeLocation
-			const FVector ComponentLoc = K2_GetComponentLocation();
+			FVector ComponentLoc = GetComponentLocation();
 			WheelCenterWorld = ComponentLoc - TempWheelRelativeLocation;
 
 			// Ray start = WheelCenterWorld + RotateAroundX( GetYAxisDepthOffset(YIndex) )
-			const FVector YDepthOffset = GetYAxisDepthOffset(/*RayIndexOnYAxis=*/YIndex);
+			FVector YDepthOffset = GetYAxisDepthOffset(/*RayIndexOnYAxis=*/YIndex);
 			//const FVector RayStartVector = GetRotateRayStartAroundZAxis(YDepthOffset);
 			//const FVector StartOffsetCamber = GetRotateRayStartOffsetVectorAroundXAxis(RayStartVector);
-			const FVector StartOffsetCamber = GetRotateRayStartOffsetVectorAroundXAxis(YDepthOffset);
-			const FVector Start = WheelCenterWorld + StartOffsetCamber;
+			FVector StartOffsetCamber = GetRotateRayStartOffsetVectorAroundXAxis(YDepthOffset);
+			//Wheel Location with Steering rotation applied on raystart offsets of specified Ray index at Y axis.
+			FVector Start = WheelCenterWorld + StartOffsetCamber;
 
-			const FVector RayEndVector = GetRotateRayEndPointAroundYAxis(YIndex);
+			FVector RayEndVector = GetRotateRayEndPointAroundYAxis(YIndex);
 			//const FVector Tz = GetRotateRayEndAroundZAxis(T);
-			const FVector End = Start - GetRotateRayEndVectorOffsetAroundXAxis(RayEndVector);
+			FVector End = Start - GetRotateRayEndVectorOffsetAroundXAxis(RayEndVector);
 
 			// Debug color from the first-loop index chain in BP
-			const FLinearColor TraceColor = GetTraceColorByRayCurrentYAxisDepthIndex(YIndex);
+			FLinearColor TraceColor = GetTraceColorByRayCurrentYAxisDepthIndex(YIndex);
 
 			// Do the trace
 			CreateLineTraceForHitResults(TraceColor, Start, End);
 		}
 	}
+
+	SetSpringLength();
 }
 
 void USCWheel::SetSpringLength()
 {
 	// 1) Array_Contains(True)
 	bWheelContact = WheelContacts.Contains(true);
-	FSWheel Wheel;
-	GetWheelSetup(Wheel);
-	FSSuspension Spring;
-	GetSuspensionSetup(Spring);
+	const FSWheel Wheel = GetWheelSetup();
+	const FSSuspension Spring = GetSuspensionSetup();
 
 	if (bWheelContact)
 	{
@@ -145,13 +163,13 @@ void USCWheel::SetSpringLength()
 
 				// Compute spring length:
 				// center - (hit.location + (UpVector * Wheel.Radius)) -> magnitude
-				const FVector Center = GetComponentLocation();
-				const FVector Contact = HitResult.Location + GetUpVector() * Wheel.Radius;
+				FVector Center = GetComponentLocation();
+				FVector Contact = HitResult.Location + GetUpVector() * Wheel.Radius;
 				CurrentSpringLength = (Center - Contact).Size();
 
 				// HitDepthVector & MaxHitDepth
+				MaxHitDepth = (HitResult.Location - HitResult.TraceEnd).Size();
 				HitDepthVector = HitResult.Location - HitResult.TraceEnd;
-				MaxHitDepth = HitDepthVector.Size();
 			}
 			else
 			{
@@ -163,20 +181,20 @@ void USCWheel::SetSpringLength()
 	if (!bWheelContact)
 	{
 		// No contact (air): spring release model
-		const float DeltaTime = DeltaTimer;                  // typically GetWorld()->GetDeltaSeconds()
+		float DeltaTime = DeltaTimer;                  // typically GetWorld()->GetDeltaSeconds()
 		const float Target = Spring.RestLength;
 
 		// ΔXIndex = RestLength - LastSpringLength
-		const float DeltaX = Spring.RestLength - LastSpringLength;
+		float DeltaX = Spring.RestLength - LastSpringLength;
 
 		// Force ≈ ΔXIndex * SpringRate
-		const float AucumulatedSpringForce = DeltaX * Spring.SpringStiffness;
+		float AucumulatedSpringForce = DeltaX * Spring.SpringStiffness;
 
 		// a = F / m   (clamp mass to avoid div-by-zero)
-		const float Acceleration = AucumulatedSpringForce / FMath::Max(Wheel.Mass, 1.0f);
+		float Acceleration = AucumulatedSpringForce / FMath::Max(Wheel.Mass, 1.0f);
 
 		// InterpSpeed = a * Δt
-		const float InterpSpeed = Acceleration * DeltaTime;
+		float InterpSpeed = Acceleration * DeltaTime;
 
 		// CurrentSpringLength = FInterpTo(Current, Target, Δt, InterpSpeed)
 		CurrentSpringLength = FMath::FInterpTo(CurrentSpringLength, Target, DeltaTime, InterpSpeed);
@@ -185,29 +203,26 @@ void USCWheel::SetSpringLength()
 		LastSpringLength = CurrentSpringLength;
 
 		// MakeHitResult() — reset
-		HitResult = FHitResult();
+		/*HitResult = FHitResult();
 
 		MaxHitDepth = 0.0f;
-		HitDepthVector = FVector::ZeroVector;
+		HitDepthVector = FVector::ZeroVector;*/
 	}
 }
 
 void USCWheel::CreateLineTraceForHitResults(FLinearColor TraceColor, const FVector Start, const FVector End)
 {
-	const bool bDebugDraw = true; // BP pin left unconnected
 	FHitResult OutHit;
 	const TArray<AActor*> ActorsToIgnore; // BP pin left unconnected
-	const EDrawDebugTrace::Type DrawMode = bDebugDraw ? EDrawDebugTrace::ForDuration
-		: EDrawDebugTrace::None;
 
-	const bool bHit = UKismetSystemLibrary::LineTraceSingle(
+	bool bHit = UKismetSystemLibrary::LineTraceSingle(
 		this,
 		Start,
 		End,
 		ETraceTypeQuery::TraceTypeQuery1,
 		/*bTraceComplex=*/true,
 		ActorsToIgnore,
-		DrawMode,
+		EDrawDebugTrace::ForDuration,
 		OutHit,
 		/*bIgnoreSelf=*/true,
 		TraceColor,
@@ -260,48 +275,45 @@ FLinearColor USCWheel::GetTraceColorByRayCurrentYAxisDepthIndex(int32 InCurrentY
 FVector USCWheel::GetRotateRayEndPointAroundYAxis(int32 RayIndexOnXAxis)
 {
 	// BP: Delta RayDegree = W_RayTotalDegree / W_RayCountPerDepth
-	const double DeltaRayDegree =
-		(W_RayCountPerDepth != 0.0) ? (W_RayTotalDegree / W_RayCountPerDepth) : 0.0;
+	double DeltaRayDegree = (W_RayCountPerDepth != 0.0) ? (W_RayTotalDegree / W_RayCountPerDepth) : 0.0;
 
 	// BP: RayDegree = RayIndexOnXAxis * DeltaRayDegree
-	const double AngleDeg = static_cast<double>(RayIndexOnXAxis) * DeltaRayDegree;
+	double AngleDeg = static_cast<double>(RayIndexOnXAxis) * DeltaRayDegree;
 
 	// BP: InVect = GetUpVector() * Wheel.Radius
-	FSWheel Wheel;
-	GetWheelSetup(Wheel);  // SWheel struct (Radius in cm)
-	const FVector InVect = GetUpVector() * Wheel.Radius;
+	const FSWheel Wheel = GetWheelSetup();  // SWheel struct (Radius in cm)
+	FVector InVect = GetUpVector() * Wheel.Radius;
 
 	// BP: Axis = GetRightVector()  (local Y axis)
-	const FVector Axis = GetRightVector();
+	FVector Axis = GetRightVector();
 
 	// BP: RotateAngleAxis(InVect, AngleDeg, Axis)
-	return InVect.RotateAngleAxis(static_cast<float>(AngleDeg), Axis);
+	return InVect.RotateAngleAxis(AngleDeg, Axis);
 }
 
 FVector USCWheel::GetRotateRayEndVectorOffsetAroundXAxis(FVector RayEndVector)
 {
 	// BP: CamberAngle comes from Wheel setup (degrees)
-	FSWheel Wheel;
-	GetWheelSetup(Wheel);
+	const FSWheel Wheel = GetWheelSetup();
 	const double CamberDeg = static_cast<double>(Wheel.CamberAngle);
 
 	// BP: SelectFloat( A = -Camber, B = Camber, bPickA = bIsLeft )
 	const double AngleDeg = bIsLeft ? -CamberDeg : CamberDeg;
 
 	// BP: Axis = GetForwardVector()  (local X axis)
-	const FVector Axis = GetForwardVector();
+	FVector Axis = GetForwardVector();
 
 	// BP: RotateAngleAxis(InVect=RayEndVector, AngleDeg=AngleDeg, Axis=Forward)
-	return RayEndVector.RotateAngleAxis(static_cast<float>(AngleDeg), Axis);
+	return RayEndVector.RotateAngleAxis(AngleDeg, Axis);
 }
 
 FVector USCWheel::GetRotateRayEndAroundZAxis(FVector RayEndVector)
 {
 	// BP: AngleDeg comes from SteeringAngle (degrees)
-	const double AngleDeg = SteeringAngle;
+	double AngleDeg = SteeringAngle;
 
 	// BP: Axis = GetUpVector()  (local Z axis)
-	const FVector Axis = GetUpVector();
+	FVector Axis = GetUpVector();
 
 	// BP: RotateAngleAxis(InVect=RayEndVector, AngleDeg=SteeringAngle, Axis=Up)
 	return RayEndVector.RotateAngleAxis(static_cast<float>(AngleDeg), Axis);
@@ -322,8 +334,7 @@ FVector USCWheel::GetRotateRayStartAroundZAxis(FVector RayStartVector)
 FVector USCWheel::GetYAxisDepthOffset(int32 RayIndexOnYAxis)
 {
 	// BP: GetWheelSetup -> Break -> Width
-	FSWheel Wheel;
-	GetWheelSetup(Wheel);
+	const FSWheel Wheel = GetWheelSetup();
 	const double WidthCm = static_cast<double>(Wheel.Width);   // cm
 
 	// BP: W_RayYaxisDepth (int)
@@ -343,8 +354,7 @@ FVector USCWheel::GetYAxisDepthOffset(int32 RayIndexOnYAxis)
 FVector USCWheel::GetRotateRayStartOffsetVectorAroundXAxis(FVector RayStartVector)
 {
 	// BP: GetWheelSetup->Break->CamberAngle
-	FSWheel Wheel;
-	GetWheelSetup(Wheel);
+	const FSWheel Wheel = GetWheelSetup();
 
 	const float CamberAngleDeg = Wheel.CamberAngle; // degrees
 
@@ -352,7 +362,7 @@ FVector USCWheel::GetRotateRayStartOffsetVectorAroundXAxis(FVector RayStartVecto
 	const float AngleDeg = bIsLeft ? -CamberAngleDeg : CamberAngleDeg;
 
 	// BP: Axis = GetForwardVector()  (local X axis)
-	const FVector Axis = GetForwardVector();
+	FVector Axis = GetForwardVector();
 
 	// BP: RotateAngleAxis(InVect=RayStartVector, AngleDeg=AngleDeg, Axis=Axis)
 	return RayStartVector.RotateAngleAxis(AngleDeg, Axis);
@@ -361,8 +371,7 @@ FVector USCWheel::GetRotateRayStartOffsetVectorAroundXAxis(FVector RayStartVecto
 FVector USCWheel::GetYAxisOffsetToRayStartForAxisSlopeAngle()
 {
 	// BP: GetAxisSetup -> Break -> AxisSlopeAngle
-	FSAxis AxisSetup;
-	GetAxisSetup(AxisSetup);
+	const FSAxis AxisSetup = GetAxisSetup();
 
 	const double AxisSlopeDeg = static_cast<double>(AxisSetup.AxisSlopeAngle);
 
@@ -370,16 +379,15 @@ FVector USCWheel::GetYAxisOffsetToRayStartForAxisSlopeAngle()
 	const double SignedAngleDeg = bIsLeft ? -AxisSlopeDeg : AxisSlopeDeg;
 
 	// BP: DegSin( angle ) * CurrentSpringLength
-	const double Scale = FMath::Sin(SignedAngleDeg) * CurrentSpringLength;
+	double Scale = FMath::Sin(SignedAngleDeg) * CurrentSpringLength;
 
 	// BP: GetRightVector * (that scale)
-	return GetRightVector() * static_cast<float>(Scale);
+	return GetRightVector() * Scale;
 }
 
 void USCWheel::SetSuspensionForce()
 {
-	FSSuspension SuspensionSetup;
-	GetSuspensionSetup(SuspensionSetup);
+	const FSSuspension SuspensionSetup = GetSuspensionSetup();
 
 	double SpringForce = SuspensionSetup.SpringStiffness * (SuspensionSetup.RestLength - CurrentSpringLength);
 	double DamperForce = SuspensionSetup.DamperStiffness * ((LastSpringLength - CurrentSpringLength) / DeltaTimer);
@@ -402,13 +410,11 @@ void USCWheel::SetSuspensionForce()
 
 void USCWheel::ApplySuspensionForce()
 {
-	USCAxis* Axis = nullptr;
-	GetAxis(Axis);
+	USCAxis* Axis = GetAxis();
 
 	if (Axis)
 	{
-		AVehicle* Vehicle = nullptr;
-		Axis->GetVehicle(Vehicle);
+		AVehicle* Vehicle = Axis->GetVehicle();
 		if (Vehicle)
 		{
 			//Apply Suspension Force from wheel center location to vehicle body
@@ -439,40 +445,24 @@ void USCWheel::ResetHitValues()
 
 }
 
-void USCWheel::GetAxis(USCAxis*& Axis)
+USCAxis* USCWheel::GetAxis() const
 {
-	Axis = Cast<USCAxis>(this->GetAttachParent());
+	return Cast<USCAxis>(this->GetAttachParent());
 }
 
-void USCWheel::GetAxisSetup(FSAxis& AxisSetup)
+FSAxis USCWheel::GetAxisSetup() const
 {
-	USCAxis* Axis = nullptr;
-	GetAxis(Axis);
-	if (Axis)
-	{
-		AxisSetup = Axis->AxisSetup;
-	}
+	return GetAxis()->AxisSetup;
 }
 
-void USCWheel::GetSuspensionSetup(FSSuspension& Suspension)
+FSSuspension USCWheel::GetSuspensionSetup() const
 {
-	USCAxis* Axis = nullptr;
-	GetAxis(Axis);
-	if (Axis)
-	{
-		Suspension = Axis->AxisSetup.Suspension;
-	}
+	return GetAxisSetup().Suspension;
 }
 
-void USCWheel::GetWheelSetup(FSWheel& Wheel)
+FSWheel USCWheel::GetWheelSetup() const
 {
-	USCAxis* Axis = nullptr;
-	GetAxis(Axis);
-	if (Axis)
-	{
-		Wheel = Axis->AxisSetup.Wheel;
-	}
-	
+	return GetAxis()->AxisSetup.Wheel;	
 }
 
 void USCWheel::DrawDebugLines()
@@ -482,17 +472,13 @@ void USCWheel::DrawDebugLines()
 	if (!World) return;
 
 	// --- Nodes: GetComponentLocation, WheelCenterWorld, CurrentSpringLength / RestLength -> grayscale color ---
-	const FVector CompLoc = GetComponentLocation();
-	const FVector WheelCenter = WheelCenterWorld;
-	FSSuspension SuspensionSetup;
-	GetSuspensionSetup(SuspensionSetup);
+	FVector CompLoc = GetComponentLocation();
+	FVector WheelCenter = WheelCenterWorld;
+	const FSSuspension SuspensionSetup = GetSuspensionSetup();
 
-	const double  Ratio = (SuspensionSetup.RestLength != 0.f) ? (CurrentSpringLength / SuspensionSetup.RestLength) : 0.0;
+	double Ratio = (SuspensionSetup.RestLength != 0.f) ? (CurrentSpringLength / SuspensionSetup.RestLength) : 0.0;
 
-	const FLinearColor Gray(static_cast<float>(Ratio),
-		static_cast<float>(Ratio),
-		static_cast<float>(Ratio),
-		1.0f);
+	FLinearColor Gray(static_cast<float>(Ratio), static_cast<float>(Ratio), static_cast<float>(Ratio), 1.0f);
 
 	// Draw: component location -> wheel center (gray)
 	UKismetSystemLibrary::DrawDebugLine(this, CompLoc, WheelCenter, Gray, 0.0f, 5.0f);
@@ -504,33 +490,32 @@ void USCWheel::DrawDebugLines()
 		};
 
 	// --- Red line: WheelCenter -> WheelCenter + UpVector * ((Fz/Fz) * 100) ---
-	const double FzVal = Fz;
-	const float  UpScale = static_cast<float>(SafeDiv(FzVal, FzVal) * 100.0); // effectively 100 if Fz != 0
-	const FVector UpVecDraw = GetUpVector() * UpScale;
+	double FzVal = Fz;
+	float UpScale = static_cast<float>(SafeDiv(FzVal, FzVal) * 100.0); // effectively 100 if Fz != 0
+	FVector UpVecDraw = GetUpVector() * UpScale;
 
 	UKismetSystemLibrary::DrawDebugLine(this, WheelCenter, WheelCenter + UpVecDraw, FLinearColor::Red, 0.0f, 5.0f);
 
 	// --- Green line: WheelCenter -> WheelCenter + (FyVec / Fz) * 100 ---
-	const float FyScaleDen = FMath::IsNearlyZero(static_cast<float>(FzVal)) ? 1.0f : static_cast<float>(FzVal);
-	const FVector FyDraw = (FyVec / FyScaleDen) * 100.0f;
+	float FyScaleDen = FMath::IsNearlyZero(static_cast<float>(FzVal)) ? 1.0f : static_cast<float>(FzVal);
+	FVector FyDraw = (FyVec / FyScaleDen) * 100.0f;
 
 	UKismetSystemLibrary::DrawDebugLine(this, WheelCenter, WheelCenter + FyDraw, FLinearColor::Green, 0.0f, 5.0f);
 
 	// --- Blue line: WheelCenter -> WheelCenter + (FxVec / Fz) * 100 ---
-	const FVector FxDraw = (FxVec / FyScaleDen) * 100.0f;
+	FVector FxDraw = (FxVec / FyScaleDen) * 100.0f;
 
 	UKismetSystemLibrary::DrawDebugLine(this, WheelCenter, WheelCenter + FxDraw, FLinearColor::Blue, 0.0f, 5.0f);
 #endif
 }
 
-void USCWheel::GetWheelLinearVelocityLocal(FVector& WheelLinearVelocityLocal)
+FVector USCWheel::GetWheelLinearVelocityLocal()
 {
-	USCAxis* Axis = nullptr;
-	GetAxis(Axis);
+	FVector WheelLinearVelocityLocal = FVector::ZeroVector;
+	USCAxis* Axis = GetAxis();
 	if (Axis)
 	{
-		AVehicle* Vehicle = nullptr;
-		Axis->GetVehicle(Vehicle);
+		AVehicle* Vehicle = Axis->GetVehicle();
 		if (Vehicle)
 		{
 			FVector WheelVelocity = Vehicle->VehicleBody->GetPhysicsLinearVelocityAtPoint(HitResult.Location);
@@ -550,12 +535,13 @@ void USCWheel::GetWheelLinearVelocityLocal(FVector& WheelLinearVelocityLocal)
 			WheelLinearVelocityLocal = UKismetMathLibrary::InverseTransformDirection(WorlTransform, WheelForwardVelocity);
 		}
 	}
+
+	return WheelLinearVelocityLocal;
 }
 
-FText USCWheel::GetSuspensionTag()
+FText USCWheel::GetSuspensionTag() const
 {
-	USCAxis* Axis = nullptr;
-	GetAxis(Axis);
+	USCAxis* Axis = GetAxis();
 	if (Axis)
 	{
 		FString AxisName = UKismetStringLibrary::GetSubstring(Axis->AxisSetup.AxisName.ToString(), 10, 1);
@@ -578,10 +564,8 @@ void USCWheel::PrintDebug()
 	// then_0, then_1, then_2, then_3, then_4, then_5
 	// We’ll just execute them in that order.
 	// -----------------------------
-	AVehicle* Vehicle = nullptr;
-	USCAxis* Axis = nullptr;
-	GetAxis(Axis);
-	Axis->GetVehicle(Vehicle);
+	USCAxis* Axis = GetAxis();
+	AVehicle* Vehicle = Axis->GetVehicle();
 
 	if (Axis && Vehicle)
 	{
@@ -628,7 +612,7 @@ void USCWheel::PrintDebug()
 			}
 
 			// Divide_VectorFloat (cm/s to m/s) with B=100
-			const FVector WorldVelocityMs = WorldVelocityCms / 100.0f;
+			FVector WorldVelocityMs = WorldVelocityCms / 100.0f;
 
 			// Suspension tag (same source pin as above)
 			const FText SuspensionTag = FText::FromString(GetName());
@@ -637,7 +621,7 @@ void USCWheel::PrintDebug()
 			FFormatNamedArguments Args;
 			Args.Add(TEXT("SuspensionTag"), SuspensionTag);
 			Args.Add(TEXT("WorldVeloctiy"), UKismetTextLibrary::Conv_VectorToText(WorldVelocityMs));
-			const FText Msg = FText::Format(NSLOCTEXT("SCWheel", "DbgWorldVelFmt", "{SuspensionTag} World Velocity = {WorldVeloctiy}"), Args);
+			FText Msg = FText::Format(NSLOCTEXT("SCWheel", "DbgWorldVelFmt", "{SuspensionTag} World Velocity = {WorldVeloctiy}"), Args);
 
 			UKismetSystemLibrary::PrintText(
 				this,
@@ -659,9 +643,9 @@ void USCWheel::PrintDebug()
 				// The pasted graph converts to text from a vector produced by an upstream node (id …11).
 				// That node is not included in the dump, but in this pattern it’s the world velocity
 				// transformed into the parent’s local space. We reproduce that exactly:
-				const FVector WorldVelocityCmss = VehicleBody->GetPhysicsLinearVelocityAtPoint(FVector::ZeroVector);
+				FVector WorldVelocityCmss = VehicleBody->GetPhysicsLinearVelocityAtPoint(FVector::ZeroVector);
 				const FVector WorldVelocityMs = WorldVelocityCmss / 100.0f;
-				const FTransform BodyXform = VehicleBody->GetComponentTransform();
+				FTransform BodyXform = VehicleBody->GetComponentTransform();
 				LocalVelocity = BodyXform.InverseTransformVectorNoScale(WorldVelocityMs);
 			}
 
@@ -670,7 +654,7 @@ void USCWheel::PrintDebug()
 			FFormatNamedArguments Args;
 			Args.Add(TEXT("SuspensionTag"), SuspensionTag);
 			Args.Add(TEXT("LocalVeloctiy"), UKismetTextLibrary::Conv_VectorToText(LocalVelocity));
-			const FText Msg = FText::Format(NSLOCTEXT("SCWheel", "DbgLocalVelFmt", "{SuspensionTag} Local Velocity = {LocalVeloctiy}"), Args);
+			FText Msg = FText::Format(NSLOCTEXT("SCWheel", "DbgLocalVelFmt", "{SuspensionTag} Local Velocity = {LocalVeloctiy}"), Args);
 
 			UKismetSystemLibrary::PrintText(
 				this,
@@ -695,10 +679,7 @@ void USCWheel::PrintDebug()
 			Args.Add(TEXT("Fx"), FText::AsNumber(Fx));
 			Args.Add(TEXT("Fy"), FText::AsNumber(Fy));
 
-			const FText Msg = FText::Format(
-				NSLOCTEXT("SCWheel", "DbgRpmForcesFmt",
-					"{SuspensionTag} RPM = {WheelRPM} RPM\n{SuspensionTag} Fx = {Fx} N\n{SuspensionTag} Fy = {Fy} N"),
-				Args);
+			FText Msg = FText::Format(NSLOCTEXT("SCWheel", "DbgRpmForcesFmt", "{SuspensionTag} RPM = {WheelRPM} RPM\n{SuspensionTag} Fx = {Fx} N\n{SuspensionTag} Fy = {Fy} N"), Args);
 
 			UKismetSystemLibrary::PrintText(
 				this,
@@ -722,16 +703,13 @@ void USCWheel::PrintDebug()
 			FricFmt.MaximumFractionalDigits = 2;
 			FricFmt.RoundingMode = ERoundingMode::HalfToEven;
 
-			const FText FrictionTorqueTxt = FText::AsNumber(WheelFrictionTorque, &FricFmt); // uses your BP variable "FrictionTorque"
+			FText FrictionTorqueTxt = FText::AsNumber(WheelFrictionTorque, &FricFmt); // uses your BP variable "FrictionTorque"
 
 			FFormatNamedArguments Args;
 			Args.Add(TEXT("SuspensionTag"), SuspensionTag);
 			Args.Add(TEXT("FrictionTorque"), FrictionTorqueTxt);
 
-			const FText Msg = FText::Format(
-				NSLOCTEXT("SCWheel", "DbgFricTorqueFmt",
-					"{SuspensionTag} Friction Torque = {FrictionTorque} Nm"),
-				Args);
+			FText Msg = FText::Format(NSLOCTEXT("SCWheel", "DbgFricTorqueFmt", "{SuspensionTag} Friction Torque = {FrictionTorque} Nm"), Args);
 
 			UKismetSystemLibrary::PrintText(
 				this,
@@ -763,18 +741,15 @@ void USCWheel::PrintDebug()
 			BiasFmt.MaximumFractionalDigits = 2;
 			BiasFmt.RoundingMode = ERoundingMode::HalfToEven;
 
-			const FText BrakeTorqueTxt = FText::AsNumber(WheelBrakeTorque, &TorqFmt);
-			const FText BrakeBiasTxt = FText::AsNumber(BrakeBias, &BiasFmt);
+			FText BrakeTorqueTxt = FText::AsNumber(WheelBrakeTorque, &TorqFmt);
+			FText BrakeBiasTxt = FText::AsNumber(BrakeBias, &BiasFmt);
 
 			FFormatNamedArguments Args;
 			Args.Add(TEXT("SuspensionTag"), SuspensionTag);
 			Args.Add(TEXT("BrakeTorque"), BrakeTorqueTxt);
 			Args.Add(TEXT("BrakeBias"), BrakeBiasTxt);
 
-			const FText Msg = FText::Format(
-				NSLOCTEXT("SCWheel", "DbgBrakeFmt",
-					"{SuspensionTag} Brake Torque = {BrakeTorque} Nm\n{SuspensionTag} Brake Bias = {BrakeBias} k"),
-				Args);
+			FText Msg = FText::Format(NSLOCTEXT("SCWheel", "DbgBrakeFmt", "{SuspensionTag} Brake Torque = {BrakeTorque} Nm\n{SuspensionTag} Brake Bias = {BrakeBias} k"), Args);
 
 			UKismetSystemLibrary::PrintText(
 				this,
@@ -806,21 +781,16 @@ void USCWheel::SetFrictionForces()
 void USCWheel::SetWheelVisualRelativeRotation()
 {
 	// --- Break current WheelRelativeRotation (K2Node_CallFunction_4)
-	const float CurrRoll = WheelRelativeRotation.Roll;   // X
-	const float CurrPitch = WheelRelativeRotation.Pitch;  // Y
-	const float CurrYaw = WheelRelativeRotation.Yaw;    // Z
+	float CurrRoll = WheelRelativeRotation.Roll;   // X
+	float CurrPitch = WheelRelativeRotation.Pitch;  // Y
+	float CurrYaw = WheelRelativeRotation.Yaw;    // Z
 
 	// --- Pitch target = CurrPitch + RadiansToDegrees(WheelAngularVelocity) * DeltaTimer * -1
-	const double DegPerSecNeg = FMath::RadiansToDegrees(WheelAngularVelocity) * -1.0; // (CallFunction_20 -> Mult_5 with C=-1)
-	const double PitchTarget = static_cast<double>(CurrPitch) + (DegPerSecNeg * DeltaTimer); // (Add_4)
+	double DegPerSecNeg = FMath::RadiansToDegrees(WheelAngularVelocity) * -1.0; // (CallFunction_20 -> Mult_5 with C=-1)
+	double PitchTarget = static_cast<double>(CurrPitch) + (DegPerSecNeg * DeltaTimer); // (Add_4)
 
 	// --- Interp pitch (FInterpTo with speed = 10) (CallFunction_23)
-	float NewPitch = FMath::FInterpTo(
-		CurrPitch,
-		static_cast<float>(PitchTarget),
-		static_cast<float>(DeltaTimer),
-		10.0f
-	);
+	float NewPitch = FMath::FInterpTo(CurrPitch, static_cast<float>(PitchTarget), static_cast<float>(DeltaTimer), 10.0f);
 
 	// --- If NewPitch == -360 choose 0 else NewPitch (Select_2 with EqualEqual_DoubleDouble)
 	if (NewPitch == -360.0f)
@@ -837,7 +807,7 @@ void USCWheel::SetWheelVisualRelativeRotation()
 	// --- Apply to WheelMesh: Location.Z = -CurrentSpringLength, Rotation = (Roll = WheelRelativeRotation.Roll, Pitch = 0, Yaw = Left?0:180)
 	if (WheelMesh)
 	{
-		const FVector NewLoc(0.f, 0.f, static_cast<float>(-CurrentSpringLength));
+		FVector NewLoc(0.f, 0.f, static_cast<float>(-CurrentSpringLength));
 
 		const float YawForMesh = bIsLeft ? 0.0f : 180.0f; // (False=180, True=0)
 
@@ -855,7 +825,7 @@ void USCWheel::SetWheelVisualRelativeRotation()
 
 		// Delta pitch per tick for child parts:
 		// RadiansToDegrees(WheelAngularVelocity * -1) * DeltaTimer * (bIsLeft ? -1 : 1) (CallFunction_18, Mult_6, Select_1, Mult_3)
-		const double ChildDegPerFrame =
+		double ChildDegPerFrame =
 			FMath::RadiansToDegrees(WheelAngularVelocity * -1.0) *
 			DeltaTimer *
 			(bIsLeft ? -1.0 : 1.0);
@@ -868,27 +838,23 @@ void USCWheel::SetWheelVisualRelativeRotation()
 	}
 }
 
-void USCWheel::GetWheelInertia(double& WheelInertia)
+double USCWheel::GetWheelInertia() const
 {
-	FSAxis AxisSetup;
-	GetAxisSetup(AxisSetup);
-	WheelInertia = 0.5 * (AxisSetup.Wheel.Radius / 100.0 * AxisSetup.Wheel.Radius / 100.0) * AxisSetup.Wheel.Mass;
+	const FSAxis AxisSetup = GetAxisSetup();
+	return 0.5 * (AxisSetup.Wheel.Radius / 100.0 * AxisSetup.Wheel.Radius / 100.0) * AxisSetup.Wheel.Mass;
 }
 
 void USCWheel::SetWheelAngularVelocity()
 {
 
-	double WheelInertia = 0.0;
-	GetWheelInertia(WheelInertia);
+	const double WheelInertia = GetWheelInertia();
 
 	UACVehiclePhysics* VehiclePhysics = nullptr;
 	GetVehiclePhysics(VehiclePhysics);
 
-	double CurrentTotalGearRatio = 0.0;
-	VehiclePhysics->GetTotalGearRatio(CurrentTotalGearRatio);
+	double CurrentTotalGearRatio = VehiclePhysics->GetTotalGearRatio();
 
-	int CurrentGear = 0;
-	VehiclePhysics->GetCurrentGear(CurrentGear);
+	int CurrentGear = VehiclePhysics->GetCurrentGear();
 
 	double WheelAngularAcceleration = WheelTractionTorque / WheelInertia;	
 	double MaxWheelSpeedOnCurrentGear = CurrentGear != 1 ? VehiclePhysics->EngineAngularVelocity / CurrentTotalGearRatio : 99999.0;
@@ -898,15 +864,14 @@ void USCWheel::SetWheelAngularVelocity()
 
 }
 
-void USCWheel::GetLongSlipVelocity(double& LongSlipVelocity)
+double USCWheel::GetLongSlipVelocity()
 {
-	LongSlipVelocity = 0.0;
-	FSWheel WheelSetup;
-	GetWheelSetup(WheelSetup);
-	FVector WheelLinearVelocity;
-	GetWheelLinearVelocityLocal(WheelLinearVelocity);
-	LongSlipVelocity = WheelAngularVelocity * (WheelSetup.Radius / 100.0) - WheelLinearVelocity.X;
+	FSWheel WheelSetup = GetWheelSetup();
+	FVector WheelLinearVelocity = GetWheelLinearVelocityLocal();
 
+	double LongSlipVelocity =  WheelAngularVelocity * (WheelSetup.Radius / 100.0) - WheelLinearVelocity.X;
+
+	return LongSlipVelocity;
 }
 
 void USCWheel::SetTireForceCombined()
@@ -922,19 +887,15 @@ void USCWheel::SetTireForceCombined()
 	}
 
 	// 1) Lateral slip from corner stiffness island
-	FVector WheelLinearVelocity;
-	GetWheelLinearVelocityLocal(WheelLinearVelocity);
-	FSWheel WheelSetup;
-	GetWheelSetup(WheelSetup);
-	FSAxis AxisSetup;
-	GetAxisSetup(AxisSetup);
+	FVector WheelLinearVelocity = GetWheelLinearVelocityLocal();
+	const FSWheel WheelSetup = GetWheelSetup();
+	const FSAxis AxisSetup = GetAxisSetup();
 	
 	double CorneringStiffness = WheelLinearVelocity.Y * WheelSetup.CorneringStiffness * -1;
 	
 	LateralSlipNormalized = FMath::Clamp(CorneringStiffness, -1.0, 1.0);
 
-	double LongSlipVelocityL = 0.0;
-	GetLongSlipVelocity(LongSlipVelocityL);
+	double LongSlipVelocityL = GetLongSlipVelocity();
 	// 2) Traction vs Friction selection
 	bool bTractionCase = WheelLinearVelocity.X * LongSlipVelocityL > 0.0;
 
@@ -974,12 +935,10 @@ void USCWheel::SetTireForceCombined()
 
 void USCWheel::GetVehiclePhysics(UACVehiclePhysics*& VehiclePhysics)
 {
-	USCAxis* Axis = nullptr;
-	GetAxis(Axis);
+	USCAxis* Axis = GetAxis();
 	if (Axis)
 	{
-		AVehicle* Vehicle = nullptr;
-		Axis->GetVehicle(Vehicle);
+		AVehicle* Vehicle = Axis->GetVehicle();
 		if (Vehicle)
 		{
 			VehiclePhysics = Vehicle->ACVehiclePhysics;
@@ -989,13 +948,11 @@ void USCWheel::GetVehiclePhysics(UACVehiclePhysics*& VehiclePhysics)
 
 void USCWheel::ApplyTireForce()
 {
-	USCAxis* Axis = nullptr;
-	GetAxis(Axis);
+	USCAxis* Axis = GetAxis();
 
 	if (Axis)
 	{
-		AVehicle* Vehicle = nullptr;
-		Axis->GetVehicle(Vehicle);
+		AVehicle* Vehicle = Axis->GetVehicle();
 		if (Vehicle)
 		{
 			//Apply Tire Force from wheel hit location to vehicle body
@@ -1009,8 +966,7 @@ void USCWheel::ApplyBrakeTorque()
 	//Wheel Deceleration with brake
 	if (WheelBrakeTorque > 0.0)
 	{
-		double WheelInertia = 0.0;
-		GetWheelInertia(WheelInertia);
+		const double WheelInertia = GetWheelInertia();
 
 		WheelAngularVelocity =
 			//Compare WheelVelocity direction before and after braking
@@ -1029,8 +985,7 @@ void USCWheel::WheelAcceleration()
 
 void USCWheel::SetTractionTorque()
 {
-	USCAxis* Axis = nullptr;
-	GetAxis(Axis);
+	USCAxis* Axis = GetAxis();
 
 	if (Axis)
 	{
@@ -1042,10 +997,8 @@ void USCWheel::SetTractionTorque()
 
 void USCWheel::SetFrictionTorque()
 {
-	FSAxis AxisSetup;
-	GetAxisSetup(AxisSetup);
-	double LongSlipVelocityL = 0.0;
-	GetLongSlipVelocity(LongSlipVelocityL);
+	const FSAxis AxisSetup = GetAxisSetup();
+	double LongSlipVelocityL = GetLongSlipVelocity();
 
 	//FrictionTorque = FrictionForce * FrictionCoefficient * Radius * Velocity
 	//If no contact give a small friction torque to avoid infinite wheel spin.
@@ -1054,17 +1007,14 @@ void USCWheel::SetFrictionTorque()
 		: 
 		50;
 
-	double WheelInertia = 0.0;
-	GetWheelInertia(WheelInertia);
+	const double WheelInertia = GetWheelInertia();
 
 	UACVehiclePhysics* VehiclePhysics = nullptr;
 	GetVehiclePhysics(VehiclePhysics);
 
-	double CurrentTotalGearRatio = 0.0;
-	VehiclePhysics->GetTotalGearRatio(CurrentTotalGearRatio);
+	double CurrentTotalGearRatio = VehiclePhysics->GetTotalGearRatio();
 	
-	int CurrentGear = 0;
-	VehiclePhysics->GetCurrentGear(CurrentGear);
+	int CurrentGear = VehiclePhysics->GetCurrentGear();
 	double WheelAngularDecelaration = WheelFrictionTorque / WheelInertia;
 	//TODO: ClutchAngularVelocity might be needed here
 	double MaxWheelSpeedOnCurrentGear = CurrentGear != 1 ? VehiclePhysics->EngineAngularVelocity / CurrentTotalGearRatio : 99999.0;
@@ -1075,8 +1025,7 @@ void USCWheel::SetFrictionTorque()
 
 void USCWheel::SetBrakeTorque(double bBrakeValue, bool bHandbrakeValue)
 {
-	FSWheel WheelSetup;
-	GetWheelSetup(WheelSetup);
+	const FSWheel WheelSetup = GetWheelSetup();
 
 	UACVehiclePhysics* VehiclePhysics = nullptr;
 	GetVehiclePhysics(VehiclePhysics);
