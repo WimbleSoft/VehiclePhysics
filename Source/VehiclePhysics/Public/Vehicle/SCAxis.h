@@ -25,41 +25,44 @@ public:
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
 public:
+	UFUNCTION(BlueprintCallable)
+	void Construct();
+
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable)
 	void CreateSuspensions();
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintPure)
-	void GetVehicle(AVehicle*& CarActor);
+	AVehicle* GetVehicle();
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintPure)
 	void CalcFrictionTorqueFeedbackRatioBias(USCWheel* Suspension, UPARAM(ref) TArray<USCWheel*>& AllSuspensions, double& OutputPin);
 
 	/** Please add a function description */
-	UFUNCTION(BlueprintPure)
-	void GetCurrentAxisVelocity(double& AxisVelocityP, double TotalAngularVelocityL);
+	UFUNCTION(BlueprintPure, meta = (ReturnDisplayName = "AxisVelocity"))
+	double GetCurrentAxisVelocity();
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable)
-	void SetAxisDriveTorque(UPARAM(ref) double& TotalDriveTorqueP);
+	void SetAxisDriveTorque(UPARAM(ref) double& InTotalDriveTorqueP);
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable)
-	void CalcWheelDriveTorque(double AxisTractionTorqueL);
+	void CalcWheelDriveTorque(double InAxisTractionTorque);
 
 	/** Please add a function description */
 	UFUNCTION(BlueprintCallable)
 	void PrintDebug();
 
 	/** Please add a function description */
-	UFUNCTION(BlueprintPure)
-	void GetCurrentAxisFrictionTorque(double& AxisFrictionTorqueL, double TotalAxisFrictionTorqueL);
+	UFUNCTION(BlueprintPure, meta = (ReturnDisplayName = "CurrentAxisFrictionTorque"))
+	double GetCurrentAxisFrictionTorque();
 
 	/** Please add a function description */
-	UFUNCTION(BlueprintPure)
-	void GetCurrentAxisTractionTorque(double& AxisTractionTorqueL, double TotalAxisTractionTorqueL);
+	UFUNCTION(BlueprintPure, meta = (ReturnDisplayName = "CurrentAxisTractionTorque"))
+	double GetCurrentAxisTractionTorque();
 public:
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Default", meta = (MultiLine = "true", ExposeOnSpawn = "true"))

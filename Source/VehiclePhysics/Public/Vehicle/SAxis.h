@@ -41,7 +41,7 @@ public:
 	FName AxisName;
 
 	/** Please add a variable description */
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (DisplayName = "AxisWidth", MakeStructureDefaultValue = "70.000000"))
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (DisplayName = "AxisWidth", MakeStructureDefaultValue = "120.000000"))
 	float AxisWidth;
 
 	/** Please add a variable description */
