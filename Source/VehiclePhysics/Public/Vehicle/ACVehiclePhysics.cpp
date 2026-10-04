@@ -127,7 +127,7 @@ void UACVehiclePhysics::SetSteeringInput(double Steering)
 	// ------------------------------------------------------------
 	float Dt = GetWorld() ? GetWorld()->GetDeltaSeconds() : 0.f;
 	float Smoothed = FMath::FInterpTo(SteeringValue, Steering, Dt, 7.5f);
-	SteeringValue = SmoothSteering ? (double)Smoothed : Steering;
+	SteeringValue = bSmoothSteering ? (double)Smoothed : Steering;
 
 	// ------------------------------------------------------------
 	// ForEach Axis in AxisArray
@@ -165,7 +165,7 @@ void UACVehiclePhysics::SetSteeringInput(double Steering)
 			if (WheelAxisName != AxisName)// EqualEqual_NameName
 				continue;
 
-			if (AckermannAccuracy)
+			if (bAckermannAccuracy)
 			{
 				SetSteeringValueByAckermannAccuracy(Wheel, AxisName, RotationAngle, AxisWidth);
 			}
@@ -210,7 +210,7 @@ void UACVehiclePhysics::SetThrottleInput(double Throttle)
 				}
 				else {
 					if (GearChange) {
-						ThrottleValue = SmoothThrottle ?
+						ThrottleValue = bSmoothThrottle ?
 							FMath::FInterpTo(ThrottleValue, ThrottleOnGearchange, GetWorld() ? GetWorld()->GetDeltaSeconds() : 0.f, 10.f)
 							:
 							ThrottleOnGearchange;
@@ -228,7 +228,7 @@ void UACVehiclePhysics::SetThrottleInput(double Throttle)
 				}
 				else {
 					if (GearChange) {
-						ThrottleValue = SmoothThrottle ?
+						ThrottleValue = bSmoothThrottle ?
 							FMath::FInterpTo(ThrottleValue, ThrottleOnGearchange, GetWorld() ? GetWorld()->GetDeltaSeconds() : 0.f, 10.f)
 							:
 							ThrottleOnGearchange;
@@ -237,7 +237,7 @@ void UACVehiclePhysics::SetThrottleInput(double Throttle)
 			}
 			else {
 				if (GearChange) {
-					ThrottleValue = SmoothThrottle ?
+					ThrottleValue = bSmoothThrottle ?
 						FMath::FInterpTo(ThrottleValue, ThrottleOnGearchange, GetWorld() ? GetWorld()->GetDeltaSeconds() : 0.f, 10.f)
 						:
 						ThrottleOnGearchange;
@@ -253,7 +253,7 @@ void UACVehiclePhysics::SetThrottleInput(double Throttle)
 		}
 		else
 		{
-			ThrottleValue = SmoothThrottle ? 
+			ThrottleValue = bSmoothThrottle ? 
 			FMath::FInterpTo(ThrottleValue, ThrottleOnGearchange, GetWorld() ? GetWorld()->GetDeltaSeconds() : 0.f, 50.f)
 			:
 			ThrottleOnGearchange;
@@ -268,8 +268,8 @@ void UACVehiclePhysics::StartEngine()
 		bStartEngineDoOnceGate = false;
 
 		//Block ignition if no juice. But play ignition sound.
-		CanIgnite = MechanicalData.FuelData.FuelLeft > 0;
-		if (CanIgnite) {
+		bCanIgnite = MechanicalData.FuelData.FuelLeft > 0;
+		if (bCanIgnite) {
 			if (MechanicalData.EngineData.EngineHealth > 0) {
 				if (!MechanicalData.EngineData.IsEngineStarted) {
 					EngineStarted.Broadcast();
@@ -281,14 +281,14 @@ void UACVehiclePhysics::StartEngine()
 			else {
 				//Can't start car if engine health is not more than 0. But play ignition sound. And set CanIgnite true for next attempt.
 				PlayEngineIgniteSound.Broadcast();
-				CanIgnite = true;
+				bCanIgnite = true;
 				bStartEngineDoOnceGate = true;
 			}
 		}
 		else {
 			//Can't start car if engine fuel left is not more than 0. But play ignition sound. And set CanIgnite true for next attempt.
 			PlayEngineIgniteSound.Broadcast();
-			CanIgnite = true;
+			bCanIgnite = true;
 			bStartEngineDoOnceGate = true;
 		}
 	}
@@ -304,7 +304,7 @@ void UACVehiclePhysics::StopEngine()
 			BrakeValue = 0.0;
 			SetNitrous(false);
 			EngineStopped.Broadcast();
-			CanIgnite = true;
+			bCanIgnite = true;
 			bStartEngineDoOnceGate = true;
 		}
 	}
@@ -340,7 +340,7 @@ void UACVehiclePhysics::SetBrakeInput(double Brake)
 	auto smoothPick = [&](double current, double target)->double
 		{
 			// SelectFloat( bPickA = SmoothBrake, A = FInterpTo(...), B = target )
-			if (SmoothBrake)
+			if (bSmoothBrake)
 			{
 				const float v = FMath::FInterpTo(
 					static_cast<float>(current),
@@ -361,7 +361,7 @@ void UACVehiclePhysics::SetBrakeInput(double Brake)
 			{
 				// then: set BrakeValue (maybe smoothed) and IsBraking
 				BrakeValue = smoothPick(BrakeValue, Brake);
-				IsBraking = (BrakeValue > 0.0);
+				bIsBraking = (BrakeValue > 0.0);
 				return;
 			}
 			// else -> fall through to the small-speed gate below (Knot_36 -> IfThenElse_15)
@@ -396,7 +396,7 @@ void UACVehiclePhysics::SetBrakeInput(double Brake)
 	{
 		// Non-FullAuto: just set BrakeValue (smoothed optional) and IsBraking
 		BrakeValue = smoothPick(BrakeValue, Brake);
-		IsBraking = (BrakeValue > 0.0);
+		bIsBraking = (BrakeValue > 0.0);
 		return;
 	}
 }
@@ -405,7 +405,7 @@ void UACVehiclePhysics::SetClutchInput(double Clutch)
 {
 	// SmoothClutch ? FInterpTo(ClutchValue -> Clutch) : Clutch
 	const double Target =
-		SmoothClutch
+		bSmoothClutch
 		? static_cast<double>(FMath::FInterpTo(
 			static_cast<float>(ClutchValue),
 			static_cast<float>(Clutch),
@@ -440,7 +440,7 @@ void UACVehiclePhysics::CreateAxis()
 
 void UACVehiclePhysics::SetHandbrake(bool bNewHandbrake)
 {
-	HandbrakeValue = bNewHandbrake;
+	bHandbrakeValue = bNewHandbrake;
 }
 
 void UACVehiclePhysics::SetLoad()
@@ -541,7 +541,7 @@ void UACVehiclePhysics::CalcFuelConsumption(double ConsumptionMultiplier /*= 1.0
 	//   MechanicalData.FuelData.FuelLeft is decreased
 
 	// CanIgnite = (FuelLeft > 0)
-	CanIgnite = (MechanicalData.FuelData.FuelLeft > 0.0);
+	bCanIgnite = (MechanicalData.FuelData.FuelLeft > 0.0);
 
 	if (!MechanicalData.EngineData.IsEngineStarted)
 	{
@@ -621,9 +621,9 @@ void UACVehiclePhysics::CalcFuelConsumption(double ConsumptionMultiplier /*= 1.0
 	if (newFuelL <= 0.0)
 	{
 		newFuelL = 0.0;
-		CanIgnite = false;              // out of fuel ⇒ cannot ignite
-		// (The BP's Then branch calls another function; if you have an EngineStop(), call it here.)
-		// EngineStop(); // ← optional if your class has it
+		bCanIgnite = false; // out of fuel ⇒ cannot ignite
+				
+		StopEngine(); // ← optional if your class has it
 	}
 
 	MechanicalData.FuelData.FuelLeft = newFuelL;
@@ -781,7 +781,7 @@ void UACVehiclePhysics::ReFuel(double LitersPerSecond /*= 1.0*/)
 	Fuel.FuelLeft = FMath::Clamp(Fuel.FuelLeft + LitersToAdd, 0.0, Fuel.FuelCapacity);
 
 	// CanIgnite := FuelLeft > 0
-	CanIgnite = (Fuel.FuelLeft > 0.0);
+	bCanIgnite = (Fuel.FuelLeft > 0.0);
 
 	// Debug print (Blueprint prints in cm^3)
 	const double ImportCm3PerSec = LitersPerSecond * 1000.0;
@@ -1238,7 +1238,7 @@ void UACVehiclePhysics::CalcBrakeTorque()
 			if (!IsValid(Suspension))
 				continue;
 
-			Suspension->SetBrakeTorque(BrakeValue, HandbrakeValue);
+			Suspension->SetBrakeTorque(BrakeValue, bHandbrakeValue);
 		}
 	}
 }

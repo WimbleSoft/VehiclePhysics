@@ -96,7 +96,7 @@ AVehicle::AVehicle()
 	//CreateLights();
 	//CreateCameras();
 	//SetHeadAndTailLights();
-	//CreateExhaustSounds();
+	CreateExhaustSounds();
 	//CreateExhaustParticles();
 	//CreateMirrors();
 	//SetDynamicMaterialsToMesh();
@@ -558,6 +558,66 @@ void AVehicle::CreateLights()
 		{
 			// Default branch in BP: do nothing. (Optional) UE_LOG for unknown sockets.
 			// UE_LOG(LogTemp, Verbose, TEXT("CreateLightsX: Ignored socket %s"), *NameStr);
+		}
+	}
+}
+
+void AVehicle::CreateExhaustSounds()
+{
+	if (!VehicleBody)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("CreateExhaustSounds: VehicleBody is null."));
+		return;
+	}
+
+	// (Optional) Prevent duplicates if this is called multiple times
+	//for (UFMODAudioComponent* C : ExhaustSounds) { if (IsValid(C)) { C->DestroyComponent(); } }
+	//for (UFMODAudioComponent* C : BackfireSounds) { if (IsValid(C)) { C->DestroyComponent(); } }
+	ExhaustSounds.Reset();
+	BackfireSounds.Reset();
+
+	TArray<FName> SocketNames = VehicleBody->GetAllSocketNames();
+
+	for (const FName& SocketName : SocketNames)
+	{
+		// Blueprint used KismetStringLibrary::Contains with bUseCase=false (case-insensitive)
+		if (!SocketName.ToString().Contains(TEXT("Exhst"), ESearchCase::IgnoreCase))
+		{
+			continue;
+		}
+
+		// ----- Exhaust component -----
+		FName SocketNameExhaustSound = FName(TEXT("A_") + SocketName.ToString());// to avoid const issues in lambda
+		if (UFMODAudioComponent* ExhaustComp = CreateDefaultSubobject<UFMODAudioComponent>(SocketNameExhaustSound))//)NewObject<UFMODAudioComponent>(this))
+		{
+			ExhaustComp->bAutoActivate = false;
+			ExhaustComp->SetIsReplicated(true);
+			ExhaustComp->SetEvent(ExhaustFmodEvent);
+			ExhaustComp->RegisterComponent(); // mirrors AddComponent node
+			//ExhaustComp->AttachToComponent(
+			//	VehicleBody,
+			//	FAttachmentTransformRules(EAttachmentRule::SnapToTarget, /*bWeldSimulatedBodies=*/true),
+			//	SocketName
+			//);
+			ExhaustComp->SetupAttachment(VehicleBody, SocketName);
+			ExhaustSounds.Add(ExhaustComp);
+		}
+
+		// ----- Backfire component (comment "BACKFIRE" in the BP) -----
+		FName SocketNameBackfire = FName(TEXT("A_") + SocketName.ToString());// to avoid const issues in lambda
+		if (UFMODAudioComponent* BackfireComp = CreateDefaultSubobject<UFMODAudioComponent>(SocketNameBackfire))//NewObject<UFMODAudioComponent>(this))
+		{
+			BackfireComp->bAutoActivate = false;
+			BackfireComp->SetIsReplicated(true);
+			BackfireComp->SetEvent(BackfireFmodEvent);
+			BackfireComp->RegisterComponent();
+			//BackfireComp->AttachToComponent(
+			//	VehicleBody,
+			//	FAttachmentTransformRules(EAttachmentRule::SnapToTarget, /*bWeldSimulatedBodies=*/true),
+			//	SocketName
+			//);
+			BackfireComp->SetupAttachment(VehicleBody, SocketName);
+			BackfireSounds.Add(BackfireComp);
 		}
 	}
 }

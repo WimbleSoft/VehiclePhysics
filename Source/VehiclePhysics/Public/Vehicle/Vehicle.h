@@ -92,7 +92,7 @@ public:
 	void CreateLights();
 
 	/** Please add a function description */
-	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Component Construction")
+	UFUNCTION(BlueprintCallable, Category = "Component Construction")
 	void CreateExhaustSounds();
 
 	/** Please add a function description */
@@ -242,6 +242,12 @@ public:
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Light Components", Replicated, meta = (MultiLine = "true"))
 	TArray<USpotLightComponent*> FarHeadLights = TArray<USpotLightComponent*>();
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sound Components")
+	TObjectPtr<UFMODEvent> ExhaustFmodEvent = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sound Components")
+	TObjectPtr<UFMODEvent> BackfireFmodEvent = nullptr;
 
 	/** Please add a variable description */
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "Sound Components", Replicated, meta = (MultiLine = "true"))
